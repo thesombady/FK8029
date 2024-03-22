@@ -1,0 +1,12 @@
+/report1/code/Eigen
+*.aux
+*.bbl
+*.blg
+*.log
+*.out
+*.fls
+*.gz
+*.xml
+*.fdb_latexmk
+*.bcf
+*.dvi
