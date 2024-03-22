@@ -11,22 +11,27 @@ fn (c Complex) abs() f64 {
 	return math.sqrt(c.real * c.real + c.imag * c.imag)
 }
 
+[@inline]
 fn (c Complex) + (o Complex) Complex {
 	return Complex{c.real + o.real, c.imag + o.imag}
 }
 
+[@inline]
 fn (c Complex) - (o Complex) Complex {
 	return Complex{c.real - o.real, c.imag - o.imag}
 }
 
+[@inline]
 fn (c Complex) * (o Complex) Complex {
 	return Complex{c.real * o.real - c.imag * o.imag, c.real * o.imag + c.imag * o.real}
 }
 
+[@inline]
 fn (c Complex) conjugate() Complex {
 	return Complex{c.real, -c.imag}
 }
 
+[@inline]
 fn (c Complex) str () string {
 	return '${c.real} + ${c.imag}i'
 }
@@ -39,6 +44,7 @@ fn (c Complex) / (o Complex) Complex {
 	return Complex{(c.real * o.real + c.imag * o.imag) / denom, (c.imag * o.real - c.real * o.imag) / denom}
 }
 
+[@inline]
 fn (c Complex) == (o Complex) bool {
 	return c.real == o.real && c.imag == o.imag
 }
@@ -63,6 +69,7 @@ fn (c Complex) angle_deg() f64 {
 }
 
 
+[@inline]
 fn Complex.new(real f64, imag f64) Complex {
 	return Complex{real, imag}
 }
