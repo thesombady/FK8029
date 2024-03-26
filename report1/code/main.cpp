@@ -9,7 +9,6 @@
 
 const double hbar_c = 197.326; // MeV fm
 const double alpha = 1.0 / 137.035399;
-const float V0 = 134; // MeV
 const int protonHelium = 2; // Two protons
 const double speedOfLight = 299792458; // m/s
 const long double c_squared = std::pow(speedOfLight * std::pow(10, 15), 2); // fm^2 / s^2
@@ -41,6 +40,7 @@ struct Preferences {
     long double massParent; // MeV
     long double massDaughter; // MeV
     double r0;
+    float potential = 134;
     std::string name;
 
     Preferences(int numberOfBins, int protonNumber, int neutronNumber, double massParent, double massDaughter, std::string name, double r0) {
@@ -82,7 +82,7 @@ long double findBoundary(int Z, long double kineticEnergy) {
  * @param[in] maximumDistance where the potential energy is equal to the kinetic energy
  * @returns the potential energy at a given distance r from the nuclei
 */
-long double potentialEnergy(long double r, int Z, float radii, long double maximumDistance) {
+long double potentialEnergy(long double r, int Z, float radii, long double maximumDistance, float V0) {
     if (r < radii) {
         return -V0 + alpha / r * hbar_c * protonHelium * Z;
     } else if (r > maximumDistance) {
@@ -131,7 +131,7 @@ Buffer solve(Preferences pref) {
 
     long double minimumDistance = pref.r0 * std::pow(massNumber - 4, 1.0 / 3.0); // massNumber - 4 is the massNumber of the daughter nuclei
 
-    long double maximumDistance =  findBoundary(pref.protonNumber - 2, energy);
+    long double maximumDistance = findBoundary(pref.protonNumber - 2, energy);
 
     long double stepSize = ( maximumDistance - minimumDistance ) / ( pref.numberOfBins - 2 );
 
@@ -157,8 +157,8 @@ Buffer solve(Preferences pref) {
         
         std::complex<long double> kLeft, kRight;
 
-        kLeft = computeK(energy, potentialEnergy(boundaries[idx], pref.protonNumber - 2, minimumDistance, maximumDistance));
-        kRight = computeK(energy, potentialEnergy(boundaries[idx + 1], pref.protonNumber - 2, minimumDistance, maximumDistance));
+        kLeft = computeK(energy, potentialEnergy(boundaries[idx], pref.protonNumber - 2, minimumDistance, maximumDistance, pref.potential));
+        kRight = computeK(energy, potentialEnergy(boundaries[idx + 1], pref.protonNumber - 2, minimumDistance, maximumDistance, pref.potential));
 
         // Now we fill the matrix elements
 
@@ -193,8 +193,8 @@ Buffer solve(Preferences pref) {
 
     std::complex<long double> rate;
 
-    rate = computeK(energy, potentialEnergy(boundaries[2 * pref.numberOfBins - 3], pref.protonNumber - 2, minimumDistance, maximumDistance));
-    rate /= computeK(energy, potentialEnergy(boundaries[0], pref.protonNumber - 2, minimumDistance, maximumDistance));
+    rate = computeK(energy, potentialEnergy(boundaries[2 * pref.numberOfBins - 3], pref.protonNumber - 2, minimumDistance, maximumDistance, pref.potential));
+    rate /= computeK(energy, potentialEnergy(boundaries[0], pref.protonNumber - 2, minimumDistance, maximumDistance, pref.potential));
 
     long double transmission;
    
@@ -229,39 +229,89 @@ int main() {
 
     std::cin >> input;
     if (input == "y") {
+        println("Want to change the initial potential y/n: ");
+        std::cin >> input;
+        if (input == "n") {
 
-        int numberOfBins = 100;
+            const float V0 = 134; // MeV
+            int numberOfBins = 100;
 
-        double deltaR = 1.4;
+            double deltaR = 1.4;
 
-        Preferences pref1 = Preferences(numberOfBins, 82, 132, 213.9952014, 209.9841885, "Po-214", deltaR); // Po-214 -> Pb-210
-        // Preferences pref2 = Preferences(numberOfBins, 94, 148, 242.059, 238.05078826, "Pu-242", deltaR); // Pu-242 -> U-238
-        //Preferences pref2 = Preferences(numberOfBins, 88, 135, 223.0185007,219.0094802, "Ra-223", deltaR); // Ra-223 -> Rn-219
-        Preferences pref2 = Preferences(numberOfBins, 86, 133, 219.00948, 214.9994200, "Rn-219", deltaR); // Radon-219 -> Polonium-215
+            Preferences pref1 = Preferences(numberOfBins, 82, 132, 213.9952014, 209.9841885, "Po-214", deltaR); // Po-214 -> Pb-210
+            Preferences pref2 = Preferences(numberOfBins, 86, 133, 219.00948, 214.9994200, "Rn-219", deltaR); // Radon-219 -> Polonium-215
 
-        Preferences pref3 = Preferences(numberOfBins, 92, 146, 238.050788, 234.043601, "U-238", deltaR); // Uranium-238 -> Thorium-234
-        Preferences pref4 = Preferences(numberOfBins, 90, 142, 230.03313, 226.025408, "Th-232", deltaR); // Thorium-230 -> Radium-226
-        Preferences pref5 = Preferences(numberOfBins, 88, 136, 226.025408, 222.0175763, "Ra-226", deltaR); // Radium-226 -> Radon-222
-        Preferences pref6 = Preferences(numberOfBins, 86, 136, 222.0175763, 218.0089730, "Rn-222", deltaR); // Radon-218 -> Polonium-214
+            Preferences pref3 = Preferences(numberOfBins, 92, 146, 238.050788, 234.043601, "U-238", deltaR); // Uranium-238 -> Thorium-234
+            Preferences pref4 = Preferences(numberOfBins, 90, 142, 232.0380536, 228.0310703, "Th-232", deltaR); // Thorium-232 -> Radium-228
+            Preferences pref5 = Preferences(numberOfBins, 88, 136, 226.025408, 222.0175763, "Ra-226", deltaR); // Radium-226 -> Radon-222
+            Preferences pref6 = Preferences(numberOfBins, 86, 136, 222.0175763, 218.0089730, "Rn-222", deltaR); // Radon-218 -> Polonium-214
 
-        Buffer buffers [6];
+            Buffer buffers [6];
 
-        buffers[0] = solve(pref1);
-        buffers[1] = solve(pref2);
-        buffers[2] = solve(pref3);
-        buffers[3] = solve(pref4);
-        buffers[4] = solve(pref5);
-        buffers[5] = solve(pref6);
-        
-        std::ofstream file("data.dat");
+            buffers[0] = solve(pref1);
+            buffers[1] = solve(pref2);
+            buffers[2] = solve(pref3);
+            buffers[3] = solve(pref4);
+            buffers[4] = solve(pref5);
+            buffers[5] = solve(pref6);
+            
+            std::ofstream file("data.dat");
 
-        file << "K\t t\t name" << std::endl;
+            file << "K\t t\t name" << std::endl;
 
-        for (int i = 0; i < 6; i++) {
-            file << buffers[i].kineticEnergy <<  "\t" << buffers[i].halfLife << "\t" << buffers[i].name << std::endl;
+            for (int i = 0; i < 6; i++) {
+                file << buffers[i].kineticEnergy <<  "\t" << buffers[i].halfLife << "\t" << buffers[i].name << std::endl;
+            }
+
+            file.close();
         }
+        else {
+            println("Input the potential energy: ");
+            float potential;
+            std::cin >> potential;
+            
+            int numberOfBins = 100;
 
-        file.close();
+            double deltaR = 1.4;
+
+            Preferences pref1 = Preferences(numberOfBins, 82, 132, 213.9952014, 209.9841885, "Po-214", deltaR); // Po-214 -> Pb-210
+            pref1.potential = potential;
+            Preferences pref2 = Preferences(numberOfBins, 86, 133, 219.00948, 214.9994200, "Rn-219", deltaR); // Radon-219 -> Polonium-215
+            pref2.potential = potential;
+
+            //Preferences pref3 = Preferences(numberOfBins, 92, 146, 238.050788, 234.043601, "U-238", deltaR); // Uranium-238 -> Thorium-234
+            Preferences pref4 = Preferences(numberOfBins, 90, 142, 232.0380536, 228.0310703, "Th-232", deltaR); // Thorium-232 -> Radium-228
+            pref4.potential = potential;
+            Preferences pref5 = Preferences(numberOfBins, 88, 136, 226.025408, 222.0175763, "Ra-226", deltaR); // Radium-226 -> Radon-222
+            pref5.potential = potential;
+            Preferences pref6 = Preferences(numberOfBins, 86, 136, 222.0175763, 218.0089730, "Rn-222", deltaR); // Radon-218 -> Polonium-214
+            pref6.potential = potential;
+
+            Buffer buffers [5];
+
+            buffers[0] = solve(pref1);
+            buffers[1] = solve(pref2);
+            //buffers[2] = solve(pref3);
+            buffers[2] = solve(pref4);
+            buffers[3] = solve(pref5);
+            buffers[4] = solve(pref6);
+            
+            std::string filename = "data";
+
+            filename.append("_");
+            filename.append(std::to_string(float(potential)));
+            filename.append(".dat");
+
+            std::ofstream file(filename);
+
+            file << "K\t t\t name" << std::endl;
+
+            for (int i = 0; i < 5; i++) {
+                file << buffers[i].kineticEnergy <<  "\t" << buffers[i].halfLife << "\t" << buffers[i].name << std::endl;
+            }
+
+            file.close();
+        }
 
     } else {
         println("Input the decay: ");
@@ -289,7 +339,7 @@ int main() {
             }
         } else if (input == "th-232") {
             for (int i = 1; i < maximumBins + 1; i++) {
-                pref.push_back(Preferences(i * 10, 90, 142, 230.03313, 226.025408, "Th-232", r0));
+                pref.push_back(Preferences(i * 10, 90, 142, 232.0380536, 228.0310703, "Th-232", r0));
             }
         } else if (input == "ra-226") {
             for (int i = 1; i < maximumBins + 1; i++) {
