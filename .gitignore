@@ -10,3 +10,8 @@
 *.fdb_latexmk
 *.bcf
 *.dvi
+*.dat
+*.txt
+*.json
+*.toc
+*.csv
