@@ -1,9 +1,14 @@
+#include <arm_neon.h>
+#include <codecvt>
 #include <iostream>
 #include <mutex>
+#include <ostream>
 #include <stdexcept>
 #include <string>
 #include <vector>
 #include <fstream>
+#include <cmath>
+#include <iomanip>
 
 #include "Eigen/Dense" // Add to path by PATH=$PATH:/PATH_TO_EIGEN?
 #include "Eigen/src/Core/CommaInitializer.h"
@@ -37,6 +42,11 @@ enum Method {
     five_point
 };
 
+enum Save {
+    probability,
+    wave
+};
+
 /**
  * Creates a matrix for the 1D Schrödinger equation
  * @param[in] n Number of points
@@ -53,21 +63,21 @@ Eigen::MatrixXd createMatrix(int n, float (*ve)(float), Method m) {
 
     if (m == three_point) {
         for (int i = 0; i < n; i++) {
+            float c1 = -1;
             if (i == 0) {
-                hamiltonian(i, 1) = -1.0 / (dx * dx);
+                hamiltonian(i, 1) = c1;
             } else if (i == n - 1) {
-                hamiltonian(i, i - 1) = -1.0 / (dx * dx);
+                hamiltonian(i, i - 1) = c1;
             } else {
-                hamiltonian(i, i - 1) = -1.0 / (dx * dx);
-                hamiltonian(i, i + 1) = -1.0 / (dx * dx);
+                hamiltonian(i, i - 1) = c1;
+                hamiltonian(i, i + 1) = c1;
             }
-            hamiltonian(i, i) = 2.0 / (dx * dx) + ve(x);
+            hamiltonian(i, i) = 2.0 + dx * dx * ve(x);
 
             x += dx;
         }
+        return hamiltonian / (dx *dx);
     } else if (m == five_point) {
-        float c_2 = 1; 
-        float c_1 = -16; 
         float c1 = -16;
         float c2 = 1;
         for (int i = 0; i < n; i++) {
@@ -75,29 +85,29 @@ Eigen::MatrixXd createMatrix(int n, float (*ve)(float), Method m) {
                 hamiltonian(i, 1) = c1; // c_1
                 hamiltonian(i, 2) = c2; // c_2
             } else if (i == 1) {
-                hamiltonian(i, i - 1) = c_1; // c_(-1)
+                hamiltonian(i, i - 1) = c1; // c_(-1)
                 hamiltonian(i, i + 1) = c1; // c_1
                 hamiltonian(i, i + 2) = c2; // c_2
-            } else if (i == n -2) {
-                hamiltonian(i, i - 2) = c_2; // c_(-2)
-                hamiltonian(i, i - 1) = c_1; // c_(-1)
-                hamiltonian(i, i + 1) = c_1; // c_1
+            } else if (i == n - 2) {
+                hamiltonian(i, i - 2) = c2; // c_(-2)
+                hamiltonian(i, i - 1) = c1; // c_(-1)
+                hamiltonian(i, i + 1) = c1; // c_1
                 
             } else if (i == n - 1) {
-                hamiltonian(i, i - 2) = c_2; // c_(-2)
-                hamiltonian(i, i - 1) = c_1; // c_(-1)
+                hamiltonian(i, i - 2) = c2; // c_(-2)
+                hamiltonian(i, i - 1) = c1; // c_(-1)
                 
             } else {
-                hamiltonian(i, i - 2) = c_2; // c_(-2)
-                hamiltonian(i, i - 1) = c_1; // c_(-1)
+                hamiltonian(i, i - 2) = c2; // c_(-2)
+                hamiltonian(i, i - 1) = c1; // c_(-1)
                 hamiltonian(i, i + 1) = c1; // c_(1)
-                hamiltonian(i, i + 2) = c_2; // c_(2)
+                hamiltonian(i, i + 2) = c2; // c_(2)
                 
             }
             hamiltonian(i, i) = 30 + (12 * dx *dx) * ve(x); // c_0
             x += dx;
         }
-        hamiltonian *= 1/(12 * dx * dx);
+        return hamiltonian / (12 * dx * dx);
     } else {
         throw std::invalid_argument("Invalid method for computing the matrix");
     }
@@ -114,7 +124,7 @@ Eigen::MatrixXd createMatrix(int n, float (*ve)(float), Method m) {
     @param[in] float (*ve)(float) - The potential function
     @return Eigen::VectorXd - The vector contaning all the eigen-values
 */
-void ThreePointTest(int n, float (*ve)(float)) {
+void ThreePointTest(int n, float (*ve)(float), std::string filename, Save s) {
     
     Method method = three_point;
 
@@ -126,7 +136,7 @@ void ThreePointTest(int n, float (*ve)(float)) {
 
     Eigen::VectorXd values = solver.eigenvalues();
     
-    Eigen::MatrixXd temp = solver.eigenvectors().reshaped(n,n);
+    Eigen::MatrixXd temp = solver.eigenvectors();
     
     Eigen::VectorXd xlist(n);
 
@@ -137,16 +147,23 @@ void ThreePointTest(int n, float (*ve)(float)) {
         x += dx;
     }
 
-    std::string filename = "3pt.dat";
-
     std::ofstream file(filename);
 
     file << "x\tv1\tv2\tv3" << std::endl;
     for (int i = 0; i < n; i++) {
-        file << xlist(i) << "\t" << temp(0, i) << "\t" << temp(1, i) << "\t" << temp(2, i) << std::endl;
+        file << xlist(i);
+        for (int j = 0; j < 4; j++) {
+            file << "\t" << std::setprecision(std::numeric_limits<long double>::digits10 + 1);
+            if (s == probability) {
+                file << std::pow(temp(i, j), 2);
+            } else {
+                file << temp(i, j);
+            }
+        }
+        file << std::endl;
     }
     for (int i = 0; i < 4; i++) {
-        std::cout << "Eigen-Value: " << i << "=" << values(i) << std::endl;
+        std::cout << "Eigen-Value: " << i << "=" <<  std::setprecision(std::numeric_limits<long double>::digits10 + 1) << values(i) << std::endl;
     }
     file.close();
 }
@@ -157,7 +174,7 @@ void ThreePointTest(int n, float (*ve)(float)) {
     @param[in] int n - The discretization number
     @param[in] float (*ve)(float) - The potential function
 */
-void FivePointTest(int n, float (*ve)(float)) {
+void FivePointTest(int n, float (*ve)(float), std::string filename, Save s) {
     
     Method method = five_point;
 
@@ -169,7 +186,7 @@ void FivePointTest(int n, float (*ve)(float)) {
 
     Eigen::VectorXd values = solver.eigenvalues();
 
-    Eigen::MatrixXd temp = solver.eigenvectors().reshaped(n,n);
+    Eigen::MatrixXd temp = solver.eigenvectors();
     
     Eigen::VectorXd xlist(n);
 
@@ -180,17 +197,33 @@ void FivePointTest(int n, float (*ve)(float)) {
         x += dx;
     }
 
-    std::string filename = "5pt.dat";
-
     std::ofstream file(filename);
+    int sign = 1;
 
     file << "x\tv1\tv2\tv3" << std::endl;
     for (int i = 0; i < n; i++) {
-        file << xlist(i) << "\t" << temp(0, i) << "\t" << temp(1, i) << "\t" << temp(2, i) << std::endl;
+        file << xlist(i);
+        for (int j = 0; j < 4; j++) {
+            if (j == 1) {// FIXED: Sign of wave-funciton when plotting
+                sign = 1;
+            } else if (j == 3) {
+                sign = -1;
+            }
+
+            file << "\t" << std::setprecision(std::numeric_limits<long double>::digits10 + 1);
+            if (s == probability) {
+                file << std::pow(temp(i, j), 2);
+            } else {
+                file << sign * temp(i, j);
+            }
+        }
+        file << std::endl;
     }
+
     for (int i = 0; i < 4; i++) {
-        std::cout << "Eigen-Value: " << i << "=" << values(i) << std::endl;
+        std::cout << "Eigen-Value: " << i << "=" << std::setprecision(std::numeric_limits<long double>::digits10 + 1) << values(i) << std::endl;
     }
+
     file.close();
 }
 
@@ -205,12 +238,12 @@ void FivePointTest(int n, float (*ve)(float)) {
 EigenResult InversePowerIteration(int n, Method m, float (*ve)(float), float shift_) {
     double tol = 1e-6;
     
-    Eigen::MatrixXd hamiltonian = createMatrix(n, ve, m); 
+    Eigen::MatrixXd hamiltonian = createMatrix(n, ve, m) / 2.0; 
     Eigen::MatrixXd shift = Eigen::MatrixXd::Identity(n, n) * shift_;
 
-    Eigen::MatrixXd matrix = hamiltonian/2 - shift; // Corrected hamiltonian to get correct eigenvalues
+    Eigen::MatrixXd matrix = hamiltonian - shift; // Corrected hamiltonian to get correct eigenvalues
 
-    Eigen::VectorXd guess = Eigen::VectorXd::Ones(n).normalized();
+    Eigen::VectorXd guess = Eigen::VectorXd::Random(n).normalized();
 
     Eigen::PartialPivLU<Eigen::Ref<Eigen::MatrixXd> > Lu(matrix); // Change?
 
@@ -221,47 +254,185 @@ EigenResult InversePowerIteration(int n, Method m, float (*ve)(float), float shi
     double norm = 0;
 
     while (true) {
-
         newGuess = Lu.solve(guess).normalized(); // FIX: Implement lu outside loop
-
-        if ((guess - newGuess).norm() < tol) {
-            EigenResult res;
-            res.value = newGuess.transpose() * hamiltonian / 2 * newGuess ;
-            res.vector = newGuess;
-            res.iterations = counter;
-            return res;
-        }
+        // std::cout << (guess - newGuess).norm() << std::endl;
 
         if (counter > 1000) {
             throw std::invalid_argument("Solution did not converge within limit");
             break;
         }
 
+        if ((guess - newGuess).norm() < tol ) {
+            break;
+        }
+        
         guess = newGuess.normalized();
 
         counter ++;        
+        
     }
+
+    EigenResult res;
+    res.value = newGuess.transpose() * hamiltonian * newGuess ;
+    res.vector = newGuess;
+    res.iterations = counter;
+    return res;
+
+}
+
+void inversePowerTest(int n, float (*ve)(float), std::string filename, std::vector<float> shift, Save s) {
+    
+    std::vector<EigenResult> res(5);
+
+    std::ofstream file(filename);
+    
+    for (int i = 0; i < shift.size(); i++ ) {
+        res[i] = InversePowerIteration(n, ::five_point, ve, shift[i]);
+        std::cout << "Eigen value: " << std::setprecision(std::numeric_limits<long double>::digits10 + 1) << res[i].value << std::endl;
+        //std::cout << res.vector << std::endl;
+        std::cout << "No. iterations: " << res[i].iterations << std::endl;
+    } 
+
+
+    std::vector<std::string> shift_;
+    //std::string shift_[6] = {"x", "v0", "v1", "v2", "v3", "v4"};
+    for (int i = 0; i < shift.size() + 1; i++) {
+        if (i == 0) {
+            file << "x";
+        } else {
+            file << "v" + std::to_string(i - 1);
+        }
+        if (i < shift.size() + 1) {
+            file << "\t";
+        } else {
+            file << std::endl;
+        }
+    }
+    /* // TODO: Remove because fixed from the above so we can have varying
+    for (int i = 0; i < 5; i++) {
+        file << shift_[i]  <<  "\t";
+    }
+    */
+
+    double dx = (xmax - xmin) / ( n - 1 );
+
+    file << std::endl;
+
+    for (int i = 0; i < n; i++){
+        for (int j = 0; j < shift.size() + 1; j++) {
+            if ( j == 0 ) {
+                // We are at x and thus do that a bit differently
+                file << xmin + i * dx;
+            } else {
+                // psi^2 = |psi|^2
+                file << std::setprecision(std::numeric_limits<long double>::digits10 + 1);
+                if (s == probability) {
+                    file << std::pow(res[j - 1].vector(i), 2);
+                } else {
+                    file  << res[j - 1].vector(i);
+                }
+            }
+            if (j < shift.size() ) {
+                file << "\t";
+            } else {
+                file << std::endl;
+            }
+        }
+    }
+
+    file.close();
+
+    std::ofstream file2("compare_" + filename);
+
+    file2 << "i\tN" << std::endl;
+
+    for (int i = 0; i < shift.size(); i++) {
+        file2 << i << "\t" <<  std::setprecision(std::numeric_limits<long double>::digits10 + 1) << std::abs(res[i].value - (i + 0.5)) << std::endl;
+    }
+
+    file2.close();
+
+}
+
+void compareDirect(int n, float (*ve)(float), std::string filename) {
+    
+    Eigen::VectorXd exactValues(n);
+    for (int i = 0; i < n; i++) {
+        exactValues(i) = (1.0 / 2.0 + i); // * hbar omega but we have it in units of hbar omega
+    }
+
+    Eigen::MatrixXd threePointMatrix = createMatrix(n, ve, ::three_point) / 2.0;
+    Eigen::MatrixXd fivePointMatrix = createMatrix(n, ve, ::five_point) / 2.0;
+
+    Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> threePointSolver(threePointMatrix);
+    Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> fivePointSolver(fivePointMatrix);
+
+    Eigen::VectorXd threePointValues = threePointSolver.eigenvalues();
+    Eigen::VectorXd fivePointValues = fivePointSolver.eigenvalues();
+
+
+    std::ofstream file(filename);
+
+    file << "state\tdE_3pt\tdE_5pt" << std::endl;
+
+    for (int i = 0; i < n; i++) {
+        file << i << "\t" <<std::setprecision(std::numeric_limits<long double>::digits10 + 1) << std::abs( exactValues(i) - threePointValues(i) ) << "\t" << std::abs( exactValues(i) - fivePointValues(i) ) << std::endl;
+    }
+
+    file.close();
+}
+
+
+void compareExact(int n, float (*ve)(float), std::string filename) {
+    
+    Eigen::VectorXd exactValues(n);
+    for (int i = 0; i < n; i++) {
+        exactValues(i) = (1.0 / 2.0 + i); // * hbar omega but we have it in units of hbar omega
+    }
+
+    Eigen::MatrixXd fivePointMatrix = createMatrix(n, ve, ::five_point) / 2.0;
+
+    Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> fivePointSolver(fivePointMatrix);
+
+    Eigen::VectorXd fivePointValues = fivePointSolver.eigenvalues();
+
+
+    std::ofstream file(filename);
+
+    file << "state\texact\tdm" << std::endl;
+
+    for (int i = 0; i < n; i++) {
+        file << i << "\t" << std::setprecision(std::numeric_limits<long double>::digits10 + 1) << exactValues(i) << "\t";
+        file << std::setprecision(std::numeric_limits<long double>::digits10 + 1) << fivePointValues(i) << std::endl;
+    }
+
+    file.close();
+}
+
+float potential2(float z) {
+    return z * z + 10 * std::exp(-std::abs(z));
 }
 
 int main() {
-    ThreePointTest(100, &potential);   
-    FivePointTest(100, &potential);   
+
+    // ThreePointTest(500, &potential, "3pt.dat", ::probability);   
+    // FivePointTest(500, &potential, "5pt.dat", ::probability);   
+    // compareDirect(500, &potential, "compare.dat");
+    // compareExact(1000, &potential, "exact.dat");
     
-    //std::cout << test1 << std::endl;
-    // std::cout << test2 << std::endl;
+    std::vector<float> shift(5);
+    shift[0] = 0.4;
+    shift[1] = 1.2;
+    shift[2] = 2.3;
+    shift[3] = 3.3;
+    shift[4] = 4.4;
+    // inversePowerTest(500, &potential, "inverse.dat", shift, ::probability);
+    std::vector<float> newShift(2);
+    newShift[0] = 2.8;
+    newShift[1] = 4.1;
+    // FivePointTest(500, &potential2, "5pt_modified.dat", ::probability);
+    FivePointTest(500, &potential2, "dm_wave.dat", ::wave);
+    inversePowerTest(500, &potential2, "ipm_wave.dat", newShift, ::wave);
 
-    /* EigenResult res;
-
-    // We know the eigenvalues approximately:
-
-    float shift[5] = {0.1, 1.4, 2.4, 3.6, 4.3};
-    // TODO: Save information in dat file
-    
-    for (int i = 0; i < 5; i++ ) {
-        res = InversePowerIteration(1500, ::five_point, &potential, shift[i]);
-        std::cout << "Eigen value: " << res.value << std::endl;
-        //std::cout << res.vector << std::endl;
-        std::cout << "No. iterations: " << res.iterations << std::endl;
-    } */
     return 0;
 }
