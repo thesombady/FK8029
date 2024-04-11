@@ -20,9 +20,9 @@ const float xmin = -6.0;
 const float xmax = 6.0;
 
 /**
- * Potential energy function
- * @param[in] x Position
- * @return Potential energy at position x, V(x)
+    Potential energy function
+    @param[in] x Position
+    @return Potential energy at position x, V(x)
 */
 float potential(float x) {
     return x * x;
@@ -48,11 +48,10 @@ enum Save {
 };
 
 /**
- * Creates a matrix for the 1D Schrödinger equation
- * @param[in] n Number of points
- * @param[in] ve Pointer to the potential energy function
- * 
- * @return Matrix for the 1D Schrödinger equation, LHS
+    Creates a matrix for the 1D Schrödinger equation
+    @param[in] n Number of points
+    @param[in] ve Pointer to the potential energy function
+    @return Matrix for the 1D Schrödinger equation, LHS
 */
 Eigen::MatrixXd createMatrix(int n, float (*ve)(float), Method m) {
     Eigen::MatrixXd hamiltonian = Eigen::MatrixXd::Zero(n, n);
@@ -122,7 +121,8 @@ Eigen::MatrixXd createMatrix(int n, float (*ve)(float), Method m) {
     using a three point stencil
     @param[in] int n - The discretization number
     @param[in] float (*ve)(float) - The potential function
-    @return Eigen::VectorXd - The vector contaning all the eigen-values
+    @param[in] std::string filename - The filename to save the data
+    @param[in] Save s - Which type of information to save
 */
 void ThreePointTest(int n, float (*ve)(float), std::string filename, Save s) {
     
@@ -173,6 +173,8 @@ void ThreePointTest(int n, float (*ve)(float), std::string filename, Save s) {
     using a five point stencil
     @param[in] int n - The discretization number
     @param[in] float (*ve)(float) - The potential function
+    @param[in] std::string filename - The filename to save the data
+    @param[in] Save s - Which type of information to save
 */
 void FivePointTest(int n, float (*ve)(float), std::string filename, Save s) {
     
@@ -233,7 +235,7 @@ void FivePointTest(int n, float (*ve)(float), std::string filename, Save s) {
     @param[in] Method m - Which stencil to use (three_point or five_point)
     @param[in] float (*ve)(float) - Potential function to use
     @param[in] flaot shift_ - Shift value to find the closest eigen-value
-    @return flaot - The eigenvalue given a shift
+    @return EigenResult - The eigen-value, eigen-vector and the number of iterations
 */
 EigenResult InversePowerIteration(int n, Method m, float (*ve)(float), float shift_) {
     double tol = 1e-6;
@@ -280,6 +282,15 @@ EigenResult InversePowerIteration(int n, Method m, float (*ve)(float), float shi
 
 }
 
+
+/**
+    InversePowerTest; solve the schrödinger equation using the inverse power method
+    Using the five-point stencil in order to parametrize the Schrödinger equation.
+    @param[in] int n - The discreziation number
+    @param[in] float (*ve)(float) - Potential function to use
+    @param[in] std::string filename - The filename to save the data
+    @param[in] std::vector<float> shift - Shift values to find the closest eigen-value
+*/
 void inversePowerTest(int n, float (*ve)(float), std::string filename, std::vector<float> shift, Save s) {
     
     std::vector<EigenResult> res(5);
@@ -308,11 +319,6 @@ void inversePowerTest(int n, float (*ve)(float), std::string filename, std::vect
             file << std::endl;
         }
     }
-    /* // TODO: Remove because fixed from the above so we can have varying
-    for (int i = 0; i < 5; i++) {
-        file << shift_[i]  <<  "\t";
-    }
-    */
 
     double dx = (xmax - xmin) / ( n - 1 );
 
@@ -354,6 +360,14 @@ void inversePowerTest(int n, float (*ve)(float), std::string filename, std::vect
 
 }
 
+
+/**
+    compareDirect; compares the eigenvalues of the direct method and the exact values
+    Compares both the three-point and five-point stencil
+    @param[in] int n - The number of points
+    @param[in] float (*ve)(float) - The potential function
+    @param[in] std::string filename - The filename to save the data
+*/
 void compareDirect(int n, float (*ve)(float), std::string filename) {
     
     Eigen::VectorXd exactValues(n);
@@ -383,6 +397,13 @@ void compareDirect(int n, float (*ve)(float), std::string filename) {
 }
 
 
+/**
+    compareExact; compares the exact eigenvalues with the computed eigenvalues
+    using the five-point stencil
+    @param[in] int n - The number of points
+    @param[in] float (*ve)(float) - The potential function
+    @param[in] std::string filename - The filename to save the data
+*/
 void compareExact(int n, float (*ve)(float), std::string filename) {
     
     Eigen::VectorXd exactValues(n);
@@ -409,9 +430,44 @@ void compareExact(int n, float (*ve)(float), std::string filename) {
     file.close();
 }
 
+/**
+    potential2; modified potential function
+    @param[in] z - Position
+    @return float - the potential at the point `z`
+*/
 float potential2(float z) {
     return z * z + 10 * std::exp(-std::abs(z));
 }
+
+/* // TODO: Implement ladder operators in spair time.
+std::vector<Eigen::MatrixXd> createOperators(int n) {
+    Eigen::MatrixXd creationOp = Eigen::MatrixXd::Zero(n, n);
+    Eigen::MatrixXd destructOp = Eigen::MatrixXd::Zero(n, n);
+
+    float dx = (xmax - xmin) / (n - 1);
+
+    float pre = 1 / (2 * dx);
+    
+    for (int i = 0; i < n; i++) {
+        if (i == 0) {
+            creationOp(i,i + 1) = pre;
+            destructOp(i, i + 1) = -pre;
+        } else if (i == n - 1) {
+            creationOp(i, i - 1) = -pre;
+            destructOp(i, i - 1) = pre;
+        } else {
+            creationOp(i, i) = xmin + i * dx;
+            destructOp(i, i) = xmin + 1 * dx;
+        }
+    }
+
+    std::vector<Eigen::MatrixXd> operators(2);
+    operators[0] = creationOp / std::sqrt(2);
+    operators[1] = destructOp / std::sqrt(2);
+
+    return operators;
+}
+*/
 
 int main() {
 
@@ -431,8 +487,11 @@ int main() {
     newShift[0] = 2.8;
     newShift[1] = 4.1;
     // FivePointTest(500, &potential2, "5pt_modified.dat", ::probability);
-    FivePointTest(500, &potential2, "dm_wave.dat", ::wave);
-    inversePowerTest(500, &potential2, "ipm_wave.dat", newShift, ::wave);
+    //FivePointTest(500, &potential2, "dm_wave.dat", ::wave);
+    //inversePowerTest(500, &potential2, "ipm_wave.dat", newShift, ::wave);
 
+    FivePointTest(500, &potential2, "prob_pert.dat", ::probability);
+    FivePointTest(500, &potential, "prob_act.dat", ::probability);
+    
     return 0;
 }
