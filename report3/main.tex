@@ -208,6 +208,7 @@ This however also implies that for increasing number of eigen-states included, t
 with the good guesses for the shift applied.
 
 \newparagraph
+\begin{comment}
 Due to the nature of this system, we also include that the ladder operators, $\hat{a}$ and $\hat{a}^\dagger$, can be used to find the eigen-states of the system, and their corresponding energies, by performing the matrix operator multiplication described in eq \eqref{eq: schrödinger}.
 The ladder operators, are defined by:
 \begin{align*}
@@ -220,28 +221,17 @@ The ladder operators, are defined by:
 \end{align}This then allows us to find the eigen-state $i$ by applying the creation operator on the previous state, i.e.
 \begin{align*}
     \ket{\psi_{i + 1}} = \hat{a}^\dagger\ket{\psi_i}.
-\end{align*}This is done until the desired number of eigen-states are found. The operators are then described in matrix form of the following, in the basis of the harmonic oscillator:
+\end{align*}We can represent the $\hat{a}$ operators as matrices, where the derivative is also approximated by a finite difference method.
+\end{comment}
+The eigen-states span an orthonormal basis, and thus the any state function can be written as a linear combination of the eigen-states, i.e.
 \begin{align*}
-    \hat{a}^\dagger &= \begin{pmatrix}
-        0 & 0 & 0 & 0 & \dots & 0 & \dots \\
-        \sqrt{1} & 0 & 0 & 0 & \dots & 0 & \dots \\
-        0 & \sqrt{2} & 0 & 0 & \dots & 0 & \dots \\
-        0 & 0 & \sqrt{3} & 0 & \dots & 0 & \dots \\
-        \vdots & \vdots & \vdots & \ddots & \ddots & \dots & \dots \\
-        0 & 0 & 0 & \dots & \sqrt{n} & 0 & \dots & \\
-        \vdots & \vdots & \vdots & \vdots & \vdots & \ddots & \ddots
-    \end{pmatrix},\\
-    \hat{a} &= \begin{pmatrix}
-    0 & \sqrt{1} & 0 & 0 & \dots & 0 & \dots \\
-    0 & 0 & \sqrt{2} & 0 & \dots & 0 & \dots \\
-    0 & 0 & 0 & \sqrt{3} & \dots & 0 & \dots \\
-    0 & 0 & 0 & 0 & \ddots & \vdots & \dots \\
-    \vdots & \vdots & \vdots & \vdots & \ddots & \sqrt{n} & \dots \\
-    0 & 0 & 0 & 0 & \dots & 0 & \ddots \\
-    \vdots & \vdots & \vdots & \vdots & \vdots & \vdots & \ddots
-    \end{pmatrix}.
-\end{align*}Both these matrices are $n\times n$ matrices, where $n$ is the number of eigen-states desired.
+    \ket{\psi} = \sum_{i = 0}^{\infty}c_i\ket{\psi_i},
+\end{align*}where $c_i$ are the coefficients of the linear combination. Therefore, the inner-product $\bra{\psi}\ket{\psi}$ is given by:
+\begin{align*}
+    \bra{\psi_i}\ket{\psi_j} = \int_0^{\infty}\psi_i^*\psi_jdz = \delta_{ij},
+\end{align*}if the basis states are normalized.
 
+\newpage
 \section{Result \& Discussion}
 In this section we solve the above theory using a discretization of the spacial domain $z_{min}= -6$ and $z_{max} = 6$, with $n - 2$ number of interior points. 
 Each section describes a specific potential function $V(z)$, in our dimensionless basis.
@@ -350,10 +340,9 @@ To further improve upon this, we could either increase the resolution of the Ham
                 grid style={line width=.1pt, draw=gray!10},
                 major grid style={line width=.2pt,draw=gray!50},
                 minor tick num=2,
-                title = {Eigen value comparison },
+                title = {$E_i$ for $\hat{H}_5$ and the analytical solution},
                 legend pos = south east,
             ]
-
             \addplot[thin, blue] table [x index = 0, y index = 1, header = true] {code/exact.dat};
             \addlegendentry{$E_{\text{exact}}$};
             \addplot[thin, red] table [x index = 0, y index = 2, header = true] {code/exact.dat};
@@ -460,7 +449,7 @@ We thus have to rely on the numerical methods to find the eigen-states of the sy
                     domain = -6:6,
                     samples = 100,
                 ]
-                \addplot[thin, black] {x*x / 2 + 10 * exp(-abs(x)) / 2};
+                \addplot[thin, black] {x*x / 2 + 10 * exp(-abs(x)) / 2} node[pos = 0.5, above] {$V(z)$};
             %\addplot[thin, blue] {x^2/2} node[pos = 0.5, above] {$V(x)$};
             \end{axis}
         \end{tikzpicture}
@@ -496,7 +485,10 @@ We thus have to rely on the numerical methods to find the eigen-states of the sy
     \caption{Potential and probability distribution of the modified potential}
     \label{fig: modified system}
 \end{figure}\noindent
-The eigen-values corresponding to the four first eigen-states are given in the table below.
+The above figure depicts the probability distribution of the first few wave-functions of the new potential.
+The solutions were found using the five-point stencil, and the probability distribution is fairly similar to that of the harmonic oscillator, fig \ref{fig: even wave-functions, dm} -- \ref{fig: odd wave-functions, dm}.
+This is expected since the potential is fairly similar to that of the harmonic oscillator, only with an added exponential term, which is small in comparison to the quadratic term.
+The eigen-states corresponding eigenvalue are given in the table below.
 \begin{table}[H]
     \centering
     \caption{Eigen-values of the modified potential}
@@ -507,10 +499,10 @@ The eigen-values corresponding to the four first eigen-states are given in the t
         2 & $4.246$\\
         3 & $4.725$\\\hline
     \end{tabular}
-\end{table}
-
-
-\begin{figure}
+\end{table}\noindent
+Even thought the probability distribution is similar to that of the harmonic oscillator, the eigen-values differ significantly.
+Comparing the five-point stencil against the inverse-power method for the modified potential, we find that the methods agree well with each other, as seen in figure \ref{fig: difference between iterative and direct wavefunction}.
+\begin{figure}[H]
     \centering
     \begin{tikzpicture}
         \begin{axis}[
@@ -525,7 +517,7 @@ The eigen-values corresponding to the four first eigen-states are given in the t
             ]
             \addplot[thin, loosely dashed, black] table[x index = 0, y index = 1, header = true] {code/dm_wave.dat};
             \addlegendentry{$\psi_0^{d}$};
-            \addplot[thin, dashed, blue] table[x index = 0, y index = 3, header = true] {code/dm_wave.dat};
+            \addplot[thin, loosely dashed, blue] table[x index = 0, y index = 3, header = true] {code/dm_wave.dat};
             \addlegendentry{$\psi_2^{d}$};
             \addplot[thin, densely dotted, black] table [x index = 0, y index = 1] {code/ipm_wave.dat};
             \addlegendentry{$\psi_0^{i}$};
@@ -535,14 +527,47 @@ The eigen-values corresponding to the four first eigen-states are given in the t
     \end{tikzpicture}
     \caption{Wave function for the iterative method $\psi_i^i$ and the direct method $\psi_i^d$.}
     \label{fig: difference between iterative and direct wavefunction}
+\end{figure}\noindent
+In the above figure, the eigen-states overlap, and thus the difference between the states is small.
+This agrees with the previous results, both methods are decent for producing the eigen-states of the system.
+Moreover, comparing the probability distribution of the wave-functions for the two system, we obtain the following results in figure \ref{fig: comparison of the two system}.
+\begin{figure}[H]
+    \centering
+    \begin{tikzpicture}[scale = 0.75]
+        \begin{axis}[
+                xlabel = {Position},
+                ylabel = {$\abs{\psi}^2$},
+                title = {Comparison of the two systems},
+                grid = both,
+                grid style={line width=.1pt, draw=gray!10},
+                major grid style={line width=.2pt,draw=gray!50},
+                minor tick num=2,
+                legend pos = north east,
+            ]
+            \addplot [thin, blue] table [x index = 0, y index = 1, header = true] {code/prob_act.dat}; 
+            \addlegendentry{$\psi_0$};
+            \addplot [thin, blue] table [x index = 0, y index = 2, header = true] {code/prob_act.dat};
+            \addlegendentry{$\psi_1$};
+            \addplot [thin, dashed, red] table [x index = 0, y index = 1, header = true] {code/prob_pert.dat}; 
+            \addlegendentry{$\psi_0$};
+            \addplot [thin, dashed, red] table [x index = 0, y index = 2, header = true] {code/prob_pert.dat}; 
+            \addlegendentry{$\psi_1$};
+        \end{axis}
+    \end{tikzpicture}
+    \caption{}
+    \label{fig: comparison of the two system}
 \end{figure}
 
 
-
 \section{Conclusion}
+In order to solve the time-independent Schrödinger equation, we have used two numerical methods, one direct method and one iterative method.
+The direct method is more computationally expensive, but its accuracy is depending on the resolution of the Hamiltonian matrix and the which stensil used.
+The iterative method is faster, but requires a good guess for the shift $s$ in order to converge to the desired eigenvalue.
+This implies that one can use the direct method to get an estimate of the eigenvalues, and then use the iterative method to find the eigenstates of the system, with higher resolution.
 
-\section{Appendix}
-
+\newparagraph
+As seen in the result, the methods agree well with each other, and also with the analytical solution of the harmonic oscillator.
+Moreover, the methods are also able to find the eigen-states of a system with a modified potential, where no analytical solution exists.
 
 \end{document}
  
