@@ -43,13 +43,26 @@ fn laplacian(v f64, alpha f64, lambda f64) f64 {
 	dx1 := (wave_function(v + h, alpha, lambda) - 2 * wf +
 		wave_function(v - h, alpha, lambda)) / (math.pow(h, 2.0))
 
-	return (dx1) / wf // We skip by We skip by multiplying by the factor since we divide by it too
+	return (dx1) / wf 
 }
 
-fn hamiltonian_on_psi(pos f64, alpha f64, lambda f64) f64 {
+/*
+	loc_energy: computes the local energy of the system
+	: pos f64 - the current position
+	: alpha f64 - the current alpha value
+	: lambda f64 - the current lambda value
+	; f64 - returns the local energy
+*/
+fn loc_energy(pos f64, alpha f64, lambda f64) f64 {
 	return (alpha + math.pow(pos, 2.0) * (0.5 - 2 * math.pow(alpha, 2.0)))
 }
 
+/*
+	random_pos: generates a random position
+	: v f64 - the current position
+	: rng rand.PRNG - the random number generator
+	; f64 - returns the new position
+*/
 fn random_pos(v f64, mut rng rand.PRNG) !f64 {
 	x := rng.f64_in_range(-sep, sep)!
 	if v + x < xmin || v + x > xmax  {
@@ -60,29 +73,34 @@ fn random_pos(v f64, mut rng rand.PRNG) !f64 {
 	return v + x 
 }
 
-/*
-	Sample the monte carlo simulation
 
+/*
+	sample: samples the local energy
+	: pos f64 - The position of the particle
+	: sim QMC - The current simulation
 */
 fn sample(pos f64, mut sim QMC) {
-	mut energy := hamiltonian_on_psi(pos, sim.alpha, sim.lambda) // Local energy
+	mut energy := loc_energy(pos, sim.alpha, sim.lambda) // Local energy
 	sim.energy << energy
-	//sim.average_energy = (sim.average_energy* (iteration_number - 1) + energy ) / f64(iteration_number)
-	//sim.variance_energy = (sim.variance_energy * (iteration_number - 1) + math.pow(energy, 2.0)) / f64(iteration_number) - math.pow(sim.average_energy, 2.0)
 }
 
+/*
+	run: Simulates via the Metropolis algorithm the quantum harmonic oscillator
+	: v f64 - The initial position
+	: sim QMC - The current simulation
+	: rng rand.PRNG - The random number generator
+*/
 fn run(v f64, mut sim QMC, mut rng rand.PRNG) {
-	simulation_time := 1_500_000 // Iterations (250_000)
+	simulation_time := 1_500_000 
 	dx := (xmax - xmin) / f64(res - 1)
 
-	mut pos_bin := []int{len: res, init: 0} // Two dimensional bin
+	mut pos_bin := []int{len: res, init: 0} // One dimensional bin
 	mut acc_rate := 0
 
 	mut pos := v
 
 	for ts := 0; ts < simulation_time; ts++ {
 		new_pos := random_pos(pos, mut rng) or { panic('Could not generate random position') }
-		// Should we generate totally random positions or pertubate the positions from the current location
 
 		mut prob := wave_function(new_pos, sim.alpha, sim.lambda)
 		prob /= wave_function(pos, sim.alpha, sim.lambda)
@@ -124,17 +142,37 @@ mut:
 	var []f64
 }
 
+/*
+	initialize: initializes the position of the particle
+	; f64 - returns the initial position
+*/
 fn initialize() !f64 {
 	return rand.f64_in_range(xmin, xmax)!
 }
 
+/*
+	write_energy: writes the energy to a file
+	: file os.File - The file to write to
+	: sim QMC - The current simulation
+*/
 fn write_energy(mut file os.File, sim QMC) {
 	file.writeln('${sim.alpha}\t${sim.average_energy}') or { panic('Coult not write to file') }
 }
+
+/*
+	write_variance: writes the variance to a file
+	: file os.File - The file to write to
+	: sim QMC - The current simulation
+*/
 fn write_variance(mut file os.File, sim QMC) {
 	file.writeln('${sim.alpha}\t${sim.variance_energy}') or { panic('Coult not write to file') }
 }
 
+/*
+	average: computes the average of a vector
+	: v []f64 - The vector to compute the average of
+	; f64 - returns the average
+*/
 fn average(v []f64) f64 {
 	mut t := 0.0
 	for i in 0..v.len {
@@ -143,6 +181,12 @@ fn average(v []f64) f64 {
 	return t / f64(v.len)
 }
 
+/*
+	variance: computes the variance of a vector
+	: v []f64 - The vector to compute the variance of
+	: average f64 - The average of the vector
+	; f64 - returns the variance
+*/
 fn variance(v []f64, average f64) f64 {
 	mut t := 0.0
 	for i in 0..v.len {
@@ -151,15 +195,17 @@ fn variance(v []f64, average f64) f64 {
 	return t / f64(v.len)
 }
 
+/*
+	main: The entry point of the program
+*/
 fn main() {
-	// rand.seed([u32(3223878742), 1732001562]) // Setting a seed
-	mut rng := &rand.PRNG(pcg32.PCG32RNG{})
+	mut rng := &rand.PRNG(pcg32.PCG32RNG{}) // Random number generator
 
-	rng.seed(seed.time_seed_array(pcg32.seed_len))
+	rng.seed(seed.time_seed_array(pcg32.seed_len)) // seed the generator
 
-	mut pos := initialize() or { panic(err) }
+	mut pos := initialize() or { panic(err) } // initial position
 
-	mut lambda := 2.0
+	mut lambda := 2.0 // Current lambda value, free parameter we choose
 
 	delta := 2 / (3 - math.sqrt(5))
 
@@ -215,7 +261,6 @@ fn main() {
 		sim_a.alpha = alpha2
 		sim_d.alpha = alpha3
 
-
 		// Reset
 		sim_a.average_energy = 0
 		sim_d.average_energy = 0
@@ -223,20 +268,17 @@ fn main() {
 		sim_d.energy = []
 
 		run(pos, mut sim_a, mut rng)
-
 		run(pos, mut sim_d, mut rng)
-
 	}
-	// They have converged to a point
-	//println(sim_a.pos)
 	println(average(sim_a.energy))
-	println(average(sim_d.energy))
 
-	///*
+	// The below code is for plotting the wave-function, the package vtikz is needed,
+	// but it's currently not up to date on github. If you want to run this code, you need to comment out the below code
 	mut total := 0
 	for i in 0..res {
 		total += sim_a.pos[i]
 	}
+
 	norm_bin := []f64{len: res, init: sim_a.pos[index] / f64(total)}
 	x := []f64{len: res, init: xmin + index * (xmax - xmin) / f64(res - 1)}
 
@@ -247,5 +289,4 @@ fn main() {
 	tikz.set_grid(true)
 	tikz.plot('harmonic_oscillator.tex')
 	println(norm_bin)
-	//*/
 }
