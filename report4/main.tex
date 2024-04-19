@@ -72,7 +72,6 @@
 \newcommand{\ket}[1]{|#1\rangle}
 \newcommand{\bra}[1]{\langle #1|}
 
-
 %  --- Special character commands ---
 
 \DeclareMathAlphabet{\mathcalligra}{T1}{calligra}{m}{n}
@@ -144,9 +143,9 @@
 %\maketitle
 
 \section{Introduction}
-In the last report, we solved the time indepedent Schrödinger equation using two methods, in order to obtain the eigen-states of the system?
-This method works for larger systems too, however, the computational cost increases drastically with the number of particles.
-Hence, certain methods have been developed in order to solve such equations with less computational cost. One such way is the use of variational Monte Carlo.
+In the last report, we solved the time independent Schrödinger equation using two methods, in order to obtain the eigenstates of the system.
+This method works for larger systems too, however, the computational cost increases drastically with the number of particles and dimension.
+Therefore, certain methods have been developed in order to solve such equations with less computational cost. One such way is the use of variational Monte Carlo.
 
 \newparagraph
 In this report, we solve the time independent Schrödinger equation for the harmonic oscillator using the variational Monte Carlo method.
@@ -161,7 +160,7 @@ The time independent Schrödinger equation is given by:
 \begin{align*}
     \hat{H}\ket{\psi} = E\ket{\psi},
 \end{align*}where $\ket{\psi}$ is the state of the system, in this case, the wave-function.
-The Hamiltonian $\hat{H}$ is system specific, and since we're solving for two systems, we have two different Hamiltonians.
+The Hamiltonian $\hat{H}$ is system specific, and since we're solving for two systems, we have two different Hamiltonians'.
 In the first case, we use the Harmonic oscillator, where the Hamiltonian is given by, in reduced units:
 \begin{align}
     \hat{H} = -\frac{1}{2}\frac{d}{dz} + \frac{1}{2}z^2,\label{eq: harmonic_oscillator Hamiltonian} 
@@ -192,8 +191,8 @@ The algorithm is as follows:
     \item Calculate the probability of the move, $p$ 
     \item Accept or reject the move depending on $\min\left(1, p\right)$
     \item Update the system (if move was accepted, otherwise keep the system as it was).
-\end{enumerate}These steps are then repeated for a number of iterations, until the system has reached equilibrium, e.g. when the system is erigodic.
-Furthermore, we also sample the systems observables, such as the energy, in order to calculate the expectation value of the system, as well as its variance.
+\end{enumerate}These steps are then repeated for a number of iterations, until the system has reached equilibrium, e.g. when the system is ergodic.
+Furthermore, we also sample the systems observable, such as the energy, in order to calculate the expectation value of the system, as well as its variance.
 The probability of the move, $p$ is given by the ratio of the probabilities of the trail wave-functions, $\psi_T$:
 \begin{align}
     p = \abs{\frac{\psi_T^\alpha(\mathbf{X}')}{\psi_T^{\alpha}(\mathbf{X})}}^2,\label{eq: probability of move}
@@ -202,7 +201,7 @@ The probability of the move, $p$ is given by the ratio of the probabilities of t
 \newparagraph
 In order to minimize the local energy, we could use various methods, such as golden search or steepest descent.
 In this report, we use golden search which is a method that finds the minimum of domain given four points. Suppose we have a potential given by the figure below, fig \ref{fig: golden search}.
-If we define two points $a$ and $d$, where there exists a single local minimum in the interval $[a, d]$, then we can define two points $a$ and $d$, which constitute a subinterval $[b,c]$ in $[a,d]$.
+If we define two points $a$ and $d$, where there exists a single local minimum in the interval $[a, d]$, then we can define two points $a$ and $d$, which constitute a sub-interval $[b,c]$ in $[a,d]$.
 Then we compute the value as then we compute the value $f(b)$ and $f(c)$, and if $f(b) < f(c)$, then we set $d = c$, otherwise we set $a = b$.
 We continue doing this until the difference between $b$ and $c$ is small enough such that we have found the point of the minima.
 \begin{figure}[H]
@@ -219,7 +218,7 @@ We continue doing this until the difference between $b$ and $c$ is small enough 
             \addplot[domain = 0:3, samples = 100, color = blue]{(0.3 * x^2 - 1) * x + 5};
         \end{axis}
     \end{tikzpicture}
-    \caption{Visualisation of the golden search method.}
+    \caption{Visualization of the golden search method.}
     \label{fig: golden search}
 \end{figure}\noindent
 We use this method to find the local minimum of the observables in the system, where we minimize the free parameter $\alpha$, defined in eq \eqref{eq: local energy minimize}
@@ -275,50 +274,159 @@ And in the close neighborhood of $x = 0$, the wave-function is not smooth, as th
 The reason for this is simply due to the discretization of the domain.
 Since the solution is localized at $x = 0$ the particle has a very high probability of being located around $x = 0$, and thus the number of times a particle is located in the bin located around $x = 0$ is greater much greater than the surrounding bins.
 Thus, increasing the number of bins would yield a smoother wave-function, and a more accurate representation of the ground state. 
-
 \begin{figure}
     \centering
-    \includegraphics[width = 0.5\textwidth]{code/harmonic_oscillator.pdf}
-    \caption{Ground state of the harmonic oscillator.}
-    \label{fig: harmonic_oscillator}
+    \begin{subfigure}{0.45\textwidth}
+        \includegraphics[scale = 0.8]{code/harmonic_oscillator.pdf}
+        \caption{Ground state of the harmonic oscillator, numerical solution}
+        \label{fig: harmonic_oscillator}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}{0.45\textwidth}
+       \begin{tikzpicture}[scale = 0.8]
+            \begin{axis}
+                [xlabel = {Position}, ylabel = {$|\psi(x)|^2$}, title = {Probability distribution},
+                grid = both,
+                grid style={line width=.1pt, draw=gray!10},
+                major grid style={line width=.2pt,draw=gray!50},
+                minor tick num=2,
+                legend pos = south east
+                ]
+                \addplot[dashed, domain = -10:10, blue, samples = 100] {(1/pi)^(1/4)*exp(-1/2 * x^2) * (1/pi)^(1/4)*exp(-1/2 * x^2)};
+            \end{axis}
+       \end{tikzpicture} 
+       \caption{Ground state of the harmonic oscillator, analytical solution}
+       \label{fig: harmonic_oscillator analytical}
+    \end{subfigure}
+    \caption{Analytical and numerical solution of the ground state of the harmonic oscillator.}
+    \label{fig: harmonic_oscillator comparison}
 \end{figure}\noindent
 The wave-function is normalized, where the normalization constant is given by:
 \begin{align*}
     \sum_{i = 0}^{N} c_i\psi(x_i) = 1,
 \end{align*}where $N$ is the number of bins in the domain, and $c_i$ is the bin count at position $x_i$.
-
 \newpage
 \subsection{Quantum Dots}
-In the definition of the Hamiltonian, eq \eqref{eq: quantum dots Hamiltonian}, it's imideat that we have two particles in a two-dimensional plane.
+In the definition of the Hamiltonian, eq \eqref{eq: quantum dots Hamiltonian}, it's visible that we have two particles in a two-dimensional plane.
 The trail wave-function is defined to be:
 \begin{align*}
     \psi_T^{\alpha}(\mathbf{X}_1, \mathbf{X}_2) = \exp\left[-\frac{1}{2}\left(\abs{\mathbf{x_1}}^2 + \abs{\mathbf{x_2}}^2\right)\right]\exp\left[\frac{\lambda\abs{\mathbf{x}_1 - \mathbf{x}_2}}{1 + \alpha\abs{\mathbf{x}_1 - \mathbf{x}_2}}\right],
 \end{align*}where $\mathbf{x}_i$ is the position of particle $i$.
-Hence, we still have a parameter to minimize, $\alpha$ but we also have free parameter $\lambda$ which then is a free parameter characterizing the coupling strength.
+Hence, we still have a parameter to minimize, $\alpha$, but we also have free parameter $\lambda$ which then is a free parameter characterizing the coupling strength.
 Therefore, $\lambda$ was set to equal two, unless otherwise specified.
-In the figure below it is seen that the energy has a minimum around $\alpha = $, with the corresponding average energy of $\average{E} = $.
-Since it's the ground-state the variance $\sigma(E)$ is also $0$ as visible in the figure below, fig \ref{fig: quantum dots: lambda 2}.
+%In the figure below it is seen that the energy has a minimum around $\alpha = $, with the corresponding average energy of $\average{E} = $.
+Since it's the ground-state the variance $\sigma(E)$ is also close to $0$ as visible in the figure below, fig \ref{fig: quantum dots: variance}.
 \begin{figure}[H]
+    \centering
+    \begin{subfigure}{0.45\textwidth}
+        \begin{tikzpicture}[scale = 0.8]
+            \begin{axis} [xlabel = {$\alpha$}, ylabel = {$E$ $[\hbar\w]$}, title = {Energy as a function of $\alpha$}, grid = both,
+                    grid style={line width=.1pt, draw=gray!10},
+                    major grid style={line width=.2pt,draw=gray!50},
+                    minor tick num=2,
+                    legend pos = south east
+                ]
+                \addplot[only marks, color = blue, mark size = 1] table[x index = 0, y index = 1, header = true] {code/energy_alpha2.dat};
+                \addlegendentry{$\average{E}$};
+            \end{axis}
+        \end{tikzpicture}
+        \caption{Energy as a function of $\alpha$}
+        \label{fig: quantum dots: energy}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}{0.45\textwidth}
+        \begin{tikzpicture}[scale = 0.8]
+            \begin{axis} [xlabel = {$\alpha$}, ylabel = {$E$ $[\hbar\w]$}, title = {Energy as a function of $\alpha$}, grid = both,
+                    grid style={line width=.1pt, draw=gray!10},
+                    major grid style={line width=.2pt,draw=gray!50},
+                    minor tick num=2,
+                    legend pos = south east
+                ]
+                \addplot[only marks, color = red, mark size = 1] table[x index = 0, y index = 1, header = true] {code/variance_alpha2.dat};
+                \addlegendentry{$\sigma(E)$};
+            \end{axis}
+        \end{tikzpicture}
+    \caption{Energy as a function of $\alpha$}
+    \label{fig: quantum dots: variance}
+    \end{subfigure}
+    \caption{Minimization of $\sigma(E)$ and $\average{E}$, $\lambda = 2$}
+    \label{fig: qdots minimizations}
+\end{figure}\noindent
+The average energy $\average{E}$ is computed to be approximately $\average{E} \approx 3.725$.
+Given this, and the fact that $\lambda$ is known, we can look at the wave-function for a static point.
+In the figure below, fig \ref{fig: quantum dots wave-function}, one point is static at the origin, and thus the figure shows the wave-function experienced by the other particle.
+The numerical solution exhibits the same behavior just dampened.
+
+\begin{figure}[H]
+    \centering
+    \begin{subfigure}{0.45\textwidth}
+    \includegraphics[scale = 0.8]{code/prob.pdf}
+    \caption{Probability density of the quantum dot, analytical solution}
+    \label{fig: quantum dots wave-function}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}{0.45\textwidth}
+        \includegraphics[scale = 0.8]{code/wave2.pdf}
+        \caption{Probability density of the quantum dot, numerical solution}
+        \label{fig: quantum dots wave-function numerical}
+    \end{subfigure}
+\end{figure}\noindent
+Varying the free parameter $\lambda$, which determines the coupling strength, we can investigate how the ground-state energy of the quantum dot changes.
+Performing the same procedure as before, we obtain the following results, fig \ref{fig: quantum dots: energy lambda}:
+\begin{figure}
     \centering
     \begin{tikzpicture}
         \begin{axis} [xlabel = {$\alpha$}, ylabel = {$E$ $[\hbar\w]$}, title = {Energy as a function of $\alpha$}, grid = both,
-                grid style={line width=.1pt, draw=gray!10},
-                major grid style={line width=.2pt,draw=gray!50},
-                minor tick num=2,
-                legend pos = south east
-            ]
-            \addplot[only marks, color = blue, mark size = 1] table[x index = 0, y index = 1, header = true] {code/energy_alpha.dat};
-            \addlegendentry{$\average{E}$};
-            %\addplot[only marks, color = red, mark size = 1] table[x index = 0, y index = 1, header = true] {code/variance_alpha.dat};
-            %\addlegendentry{$\sigma(E)$};
+            grid style={line width=.1pt, draw=gray!10},
+            major grid style={line width=.2pt,draw=gray!50},
+            minor tick num=2,
+            legend pos = south east
+        ]
+        \addplot[only marks, color = blue, mark size = 1] table[x index = 0, y index = 1, header = true] {code/energy_alpha1.dat}; 
+        \addlegendentry{$\lambda = 1$}
+
+        \addplot[only marks, color = black, mark size = 1] table[x index = 0, y index = 1, header = true] {code/energy_alpha8.dat}; 
+        \addlegendentry{$\lambda = 8$}
+
+        \addplot[only marks, color = red, mark size = 1] table[x index = 0, y index = 1, header = true] {code/energy_alpha4.dat};
+        \addlegendentry{$\lambda = 4$}
         \end{axis}
     \end{tikzpicture}
-    \caption{Energy as a function of $\alpha$}
-    \label{fig: quantum dots: lambda 2}
-\end{figure}
+    \caption{Energy as a function of $\alpha$, for different values of $\lambda$}
+    \label{fig: quantum dots: energy lambda}
+\end{figure}\noindent
+The results above, and in table \ref{tab: quantum dots energy}, show that the ground-state energy of the quantum dot increases with the coupling strength $\lambda$, which is expected.
+Moreover, when the coupling constant is zero, the ground-state energy is approximately $2.0\hbar\w$, which is the expected value for the ground-state energy of the quantum dot with no coupling.
+\begin{table}
+    \centering
+    \caption{Ground state energy of the quantum dot, for different values of $\lambda$}
+    \begin{tabular}{|c|c|c|}\hline
+        $\lambda$ & $\average{E}$ [$\hbar\w$]& $\alpha$ \\\hline
+        $1$ & $3.000$ & $0.379$\\
+        $4$ & $4.860$ & $0.528$\\
+        $8$ & $6.646$ & $0.642$\\\hline
+    \end{tabular}
+    \label{tab: quantum dots energy}
+\end{table}
+The wave-function, with a particle located at the origin, for $\lambda = 8$, with the corresponding $\alpha$ value located in table \ref{tab: quantum dots energy}, is shown in the figure below, fig \ref{fig: quantum dots wave-function lambda 8}.
+\begin{figure}[H]
+    \centering
+    \includegraphics[scale = 0.8]{code/prob2.pdf}
+    \caption{Wave-function of the quantum dot, when one particle is centered at the origin, $\lambda = 8$}
+    \label{fig: quantum dots wave-function lambda 8}
+\end{figure}\noindent
+Comparing the above figure, fig \ref{fig: quantum dots wave-function lambda 8}, with the figure fig \ref{fig: quantum dots wave-function}, one sees that the annulus around the origin has a larger radius.
+This is due to the increased coupling strength, pushing the particles apart, and thus increasing the probability of the particle being located further away from the origin.
 
 \section{Conclusion}
+In this report, the variational Monte Carlo method was used to solve the time independent Schrödinger equation for two different systems.
+Both methods were successful in finding the ground-state energy of the systems, and the wave-function of the systems were also obtained using the trail wave-function.
+For a simpler system, such as the harmonic oscillator in one dimension, the method was considerably slower than doing a direct method, where one also obtains all eigenstates.
+But for more complex systems, such as quantum dots, the method is more efficient, and the computational cost is significantly lower.
 
+\newparagraph
+The method is also very versatile, if one can give a good estimate on the trail wave-function. In doing so, one could also have multiple arguments to minimize.
+However, this would then increase the computational cost, but the method would most likely still be more efficient than a direct method, or an iterative method.
 %\printbibliography
 \end{document}
  
