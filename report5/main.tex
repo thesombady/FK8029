@@ -115,12 +115,153 @@
 
 \begin{document}
 
-\maketitle
+%\maketitle
+\begin{titlepage}
+    \begin{center}
+        \vspace*{1cm}
 
-\begin{figure}
+        \Huge
+        \textbf{Bsplines Collocation}
+
+        \vspace{0.5cm}
+        \LARGE
+        FK8029 - Computational Physics
+
+        \vspace{1.5cm}
+
+        \textbf{Andreas Evensen}
+
+        \vfill
+
+        %\includegraphics[width=0.4\textwidth]{UiO_Segl_pantone.eps}
+
+        \Large
+        Department of Physics\\
+        Stockholm University\\
+        Sweden\\
+        \today
+    \end{center}
+\end{titlepage}
+
+\section{Introduction}
+%In this this report, one investigates how to solve the Poission equation using the fundamental theory of splines as basis-functions.
+%In this report, we investigate how to solve the Poission equation using the fundamental theory of splines as basis-functions.
+%The Poission equation is a second order differential equation, which describes the electric potential $V$ in a given domain, where the charge density $\rho$ is known.
+In this report, we seek to solve Poission's equation, using callocation of basis-functions, namely B-splines.
+This, in contrast to finite element methods, allows for a non-uniform grid which can be useful in certain situations, e.g. points of discontinuities.
+Using collocation, we can solve the Poission equation, where the charge density $\rho$ is known, and the potential $V$ is to be found.
+
+
+\section{Theory \& Method}
+Using finite element methods to solve certain problems works fine enough when you have a well-defined grid.
+However, when the grid is ill-defined, or a grid is not an option, we can use finite difference methods in order to solve our problem.
+The concept of Bsplines -- basis splines, are that we can defined a set of basis functions and thus represent any function $f$ on the chosen basis set.
+This allows for the function to be well-defined in a domain, in contrast to where in finite element methods, we function is only defined at certain points.
+
+\newparagraph
+Suppose that we then have a set of points $r_1$ to $r_n$, of which are irregularly placed. We can then define the basis-function as follows:
+\begin{align}
+    B_i^1(x) &= 1~\text{if } r\in[r_i, r_i + 1) ~\text{else }0,\\
+    B_i^k(x) &= \frac{r - r_i}{r_{i + k - 1} - r_{i}}B_i^{k - 1}(x) - \frac{r_{i + k} - x}{r_{i + k} - r_{i + 1}}B_{i - 1}^{k - 1}(r).
+\end{align}Where we evaluate a given point $r$ in the neighborhood of the current position, depending on the order of the spline $k$.
+
+\newparagraph
+In this report our objective is to solve the Poission eq: $\nabla^2V = \rho(x)$, where $\rho$ is the charge density function.
+Rewriting our Poission equation, and utilizing the that we evaluate at the points $x_i$ (knot-points), then we find the expression below:
+\begin{align}
+    \sum_{n = i - 3}^{i - 1} \left(c_n \partial_r^2 B_{i}^k(x_i)\right) = -x_i \frac{4\pi\rho(x_i)}{r\pi \epsilon_0}\label{eq: mat eq}
+\end{align}This implies, that we will have a matrix equation of size $n - k$, where $n$ is the number of knots, including ghost-points, and $k$ is the spline order, in this case $k = 4$. This is referred to as collocation.
+Two boundary conditions exists, one on the left and one on the right.
+The left boundary conditions states that there is no charge at $x = 0$, which is implied by setting the first spline to be $0$.
+The right boundary condition states that far away, the charge density looks like a point charge, which implies that the right-hand side of eq \eqref{eq: mat eq} is simply the charge.
+
+\newparagraph
+We have three charge densities, one for a uniformly charged sphere, one for a spherical shell, and one for the ground state of hydrogen, all defined below:
+\begin{align}
+    \rho_{sphere}(r) &= \frac{3Q}{4\pi R^3},\label{eq: uniform sphere}\\
+    \rho_{shell}(r) &= \frac{3Q}{4\pi \left(R_o^3 - R_i^3\right)},\label{eq: shell}\\
+    \rho_{1s}(r) &= \frac{e}{\pi a_0^3}\exp\left(-\frac{2r}{a_0}\right)\label{eq: 1s hydrogen}.
+\end{align}For the purpose of this report, we define the following scaling units:
+\begin{table}[H]
     \centering
-    \includegraphics[scale = 0.8]{code/spline.pdf}
-\end{figure}
+    \caption{Unit conversions}
+    \begin{tabular}{|c|c|c|c|}\hline
+        $4\pi$ & $a_0$ & $e$ & $a_0$\\\hline
+        $1$ & $1$ & $1$ & $1$\\\hline
+    \end{tabular}
+\end{table}\noindent
+Furthermore, we also define the charge $Q$ to be equal to one.
+
+
+\section{Result \& Discussion}
+I began implementing the definitions in \verb|cpp| but ended up switch to \verb|python| after some difficulities in definiting the linear equations defined in eq \eqref{eq: mat eq}.
+We first defined the physical knot sequence $t = {i\in[0, 4]; i \in Z^+}$, using cubic splines, our Poission equation requires $C^2$-smooth functions, we obtain the following splines.
+\begin{figure}[H]
+    \centering
+    \begin{subfigure}{0.45\textwidth}
+        \includegraphics[scale = 0.7]{code/pySpline.pdf}
+        \caption{BSplines python package}
+        \label{fig: basis functions py}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}{0.45\textwidth}
+        \includegraphics[scale = 0.7]{code/spline.pdf}
+        \caption{BSplines own implementation}
+        \label{fig: basis functions own}
+    \end{subfigure}
+\end{figure}\noindent
+In fig \ref{fig: basis functions own} we have computed values to the right of the last physical knot point, which then is zero, as per definitions, and in fig \ref{fig: basis functions py} one shows the same knot-sequence, but where the domain ends at the last physical knot point.
+The area of each spline is equal to one, as per construction of the splines.
+Solving eq \eqref{eq: mat eq} where the charge density $\rho$ is given by \eqref{eq: uniform sphere}, where the radius $R$ is defined to be $10$-a.u, yields the following result.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[scale = 0.8]{code/uniform.pdf}
+    \caption{Uniform distribution}
+    \label{fig: uniform distribution}
+\end{figure}\noindent
+The potential $V(r)$ decreases as distance from the center increases.
+This is expected, as given by the exact solution, known from electromagnetism.
+The exact solution has the following form:
+\begin{align*}
+    V(R) = \frac{Q}{8\pi\epsilon_0R}\left(3 - \left(\frac{r}{R}\right)^2\right),
+\end{align*}which exhibits the same behavior, as shown in the above figure.
+The solution differs slightly compared to the exact solution, after $R = 10$, which is a result of the boundary condition of the right side.
+To account for this, we could increase the number of physical knots, which would yield a better resolution after $R = 10$.
+
+\newparagraph
+When computing the potential for a spherical shell, where the inner radius $R_i = 5$-a.u and the outer radius $R_o = 10$-a.u, we obtain the following result.
+\begin{figure}[H]
+    \centering
+    \includegraphics[scale = 0.8]{code/shell.pdf}
+    \caption{Shell distribution}
+    \label{fig: shell distribution}
+\end{figure}\noindent
+The potential is constant up to the inner radii, which is expected. The potential $V$ then drops as we move away from the void in the center. This behavior is expected, as the charge density is zero in the void, and the charge density is constant in the shell, as given by eq \eqref{eq: shell}.
+
+\newparagraph
+Lastly, the potential $V(r)$ was computed for the ground state of the hydrogen atom, i.e. state $1s$, where the charge density $\rho$ is given by eq \eqref{eq: 1s hydrogen}.
+The potential was computed for $r\in[0, 15]$-a.u, and the result is shown in fig \ref{fig: hydrogen potential}.
+\begin{figure}[H]
+    \centering
+    \includegraphics[scale = 0.8]{code/hydogen.pdf}
+    \caption{Potential energy of the ground state of hydrogen}
+    \label{fig: hydrogen potential}
+\end{figure}\noindent
+The potential $V(r)$ is decreasing rapidly as we move away from the center, which is expected, as the charge density is decreasing exponentially as we move away from the center, as given by eq \eqref{eq: 1s hydrogen}.
+Moreover, there is a discrepancy between the numerical, and exact solution. The exact solution seems to be shifted downwards, in comparison to the numerically obtained solution, even though their overall shape is in agreement.
+Most plausible reason for this, is the units used in the numerical solutions differs from those of the exact solution.
+Due to lack of time, I was not able to investigate this further.
+
+
+\section{Conclusion}
+The Poission equation was solved using the fundamental theory of basis functions, namely cubic b-splines in this report.
+This allows for non-uniform grid points, and can easily be extended to any general second order differential equation.
+This is in favor to other finite-difference methods, where the grid defines the function, instead of the function defining the grid.
+
+\newparagraph
+The potential $V(r)$ was computed for three different charge densities, a uniformly charged sphere, a spherical shell, and the ground state of hydrogen, and all results were expected, and in rough agreement with the exact solutions.
+In contrast to previous tasks, it was problematic to implement the system of equations, mostly due to index counting. This was eventually solved, but a lot of time was wasted in order to make the system of equations working, in both a \verb|cpp| and \verb|python| environment.
 
 %\printbibliography
 \end{document}
