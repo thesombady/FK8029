@@ -1,0 +1,316 @@
+\documentclass[a4paper]{article}
+
+% --- Packages ---
+
+\usepackage{a4wide}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath}
+\usepackage{mathtools}
+\usepackage{amssymb}
+\usepackage[english]{babel}
+\usepackage{mdframed}
+\usepackage{systeme,}
+\usepackage{lipsum}
+\usepackage{relsize}
+\usepackage{caption}
+\usepackage{tikz}
+\usepackage{tikz-3dplot}
+\usetikzlibrary{shapes.geometric}
+\usepackage{pgfplots}
+\usepackage{pgfplotstable}
+\pgfplotsset{compat=newest}%1.7}
+\usepackage{harpoon}%
+\usepackage{graphicx}
+\usepackage{wrapfig}
+\usepackage{subcaption}
+\usepackage{authblk}
+\usepackage{float}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{chngcntr}
+\usepackage{amsthm}
+\usepackage{comment}
+\usepackage{commath}
+\usepackage{hyperref}%Might remove, adds link to each reference
+\usepackage{url}
+\usepackage{calligra}
+\usepackage{pgf}
+
+% --- Bibtex ---
+% To run our bibliography, we need to compile the ref document
+% `biber main` or `biber ref` in the terminal
+% We can compile the document with `pdflatex main` or `latex main`
+
+\usepackage{csquotes}
+\usepackage[
+    %backend=biber,
+    backend = biber,
+    style=phys,
+    sorting=ynt,
+]{biblatex}
+
+%\addbibresource{ref.bib}
+
+
+% --- Commands --- 
+
+\newcommand{\w}{\omega}
+\newcommand{\trace}{\text{Tr}}
+\newcommand{\grad}{\mathbf{\nabla}}
+%\newcommand{\crr}{\mathfrak{r}}
+\newcommand{\laplace}{\nabla^2}
+\newcommand{\newparagraph}{\vspace{.5cm}\noindent}
+
+% --- Math character commands ---
+
+\newcommand{\curl}[1]{\mathbf{\nabla}\times \mathbf{#1}}
+\newcommand{\dive}[1]{\mathbf{\nabla}\cdot \mathbf{#1}}
+\newcommand{\res}[2]{\text{Res}(#1,#2)}
+\newcommand{\fpartial}[2]{\frac{\partial #1}{\partial #2}}
+\newcommand{\rot}[3]{\begin{vmatrix}\hat{x}&\hat{y}&\hat{z}\\\partial_x&\partial_y&\partial_z\\#1&#2&#3 \end{vmatrix}}
+\newcommand{\average}[1]{\langle #1 \rangle}
+\newcommand{\ket}[1]{|#1\rangle}
+\newcommand{\bra}[1]{\langle #1|}
+
+
+%  --- Special character commands ---
+
+\DeclareMathAlphabet{\mathcalligra}{T1}{calligra}{m}{n}
+\DeclareFontShape{T1}{calligra}{m}{n}{<->s*[2.2]callig15}{}
+\newcommand{\crr}{\mathcalligra{r}\,}
+\newcommand{\boldscriptr}{\pmb{\mathcalligra{r}}\,}
+
+
+\title{INPUT TITLE HERE}
+\author{Author : Andreas Evensen}
+\date{Date: \today}
+
+% --- Code ---
+
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+
+\lstdefinestyle{mystyle}{
+    backgroundcolor=\color{backcolour},   
+    commentstyle=\color{codegreen},
+    keywordstyle=\color{magenta},
+    numberstyle=\tiny\color{codegray},
+    stringstyle=\color{codepurple},
+    basicstyle=\ttfamily\footnotesize,
+    breakatwhitespace=false,         
+    breaklines=true,                 
+    captionpos=b,                    
+    keepspaces=true,                 
+    numbers=left,                    
+    numbersep=5pt,                  
+    showspaces=false,                
+    showstringspaces=false,
+    showtabs=false,                  
+    tabsize=2
+}
+
+\lstset{style=mystyle}
+
+\begin{document}
+
+\begin{titlepage}
+    \begin{center}
+        \vspace*{1cm}
+
+        \Huge
+        \textbf{Hydrogen atom}
+
+        \vspace{0.5cm}
+        \LARGE
+        FK8029 - Computational physics
+
+        \vspace{1.5cm}
+
+        \textbf{Andreas Evensen}
+
+        \vfill
+
+        %\includegraphics[width=0.4\textwidth]{UiO_Segl_pantone.eps}
+
+        \Large
+        Department of Physics\\
+        Stockholm University\\
+        Sweden\\
+        \today
+    \end{center}
+\end{titlepage}
+
+\section{Introduction}
+In this report, we want to solve the Bohr Hydrogen atom, where we introduce the fixed orbitals $l$.
+We accomplish this task by introducing a set of basis-functions, B-splines, which then means that we can write the wave-function as a linear combination of the basis-functions.
+Using the B-spline basis, we solve for a variety of states, such as: $1s$, $2s$, and $2p$.
+The results agree with tabulated data.
+
+
+\tableofcontents
+\newpage
+
+\section{Theory \& Method}
+Hydrogen is the simplest of all atoms, given that it only has one electron orbiting the nucleus.
+We will therefore aim to solve the wave-function for electron orbiting the nucleus. Hence, we aim to solve the following equation:
+\begin{align}
+    \hat{H}\psi(r, \theta, \phi) &= E\psi(r, \theta, \phi).\label{eq: eigen-eq}
+\end{align}We state that our wave-function $\psi(r, \theta, \phi)$, can be decomposed into a radial part and an angular part, which is commonly known as the spherical harmonics:
+\begin{align*}
+    \psi(r, \theta, \phi) = R_{nl}(r)Y_{nl}(\theta, \phi).
+\end{align*}Defining a function $P_{nl}(r) = R_{nl}(r)\cdot r$, and expressing $R_{nl}(r)$ in a B-spline basis yields the following expression:
+\begin{align}
+    \hat{H}\left(\sum_i c_i B_i^k(r)\right) &= E\left(\sum_i c_i B_i^k(r)\right),\\
+    \hat{H} &= \hbar^2\left(-\frac{1}{2m_e}\frac{d^2}{dr^2} + \frac{l(l + 1)}{2m_e}\frac{1}{r^2} - \frac{Ze^2}{4\pi\epsilon\hbar^2}\frac{1}{r}\right),\label{eq: hamiltonian}
+\end{align}
+We multiply from the left with $B_j^k(r)$ and integrate to get the following expression
+\begin{align}
+    \underbrace{\int\left(\left(\sum_j c_j B_j^k(r)\right)\hat{H}\left(\sum_i c_i B_i^k(r)\right)\right)dr}_{\mathbf{H}\mathbf{c}} &= E\underbrace{\int\left(\left(\sum_i c_j B_j^k(r)\right)\left(\sum_i c_i B_i^k(r)\right)\right)dr}_{\mathbf{B}\mathbf{c}}.\label{eq: gen eq}
+\end{align}Hence, eq \eqref{eq: eigen-eq} has been transformed to a generalized eigen-value equation.
+To transform back, we simply multiply from the left with $\mathbf{B}^{-1}$.
+Hence, this can be solved either with a direct method for an eigen-value equation, or with a generalized eigen-value equation solver. In this report, the latter was used.
+
+\newparagraph
+To find the matrix-elements of $\mathbf{H}$ and $\mathbf{B}$ we define the following expressions:
+\begin{align}
+    \mathbf{B}_{i, j} &= \int_{t_{first}}^{t_{last}}dr\left(B_{j}^k(r)B_i^k(r)\right),\label{eq: B}\\
+    \mathbf{H}_{i, j} &= \int_{t_{first}}^{t_{last}}dr\left(B_{j}^k(r)\hat{H}B_i^k(r)\right).\nonumber
+\end{align}Either $\hat{H}$ is defined as per eq \eqref{eq: hamiltonian}, or we use integration by parts to obtain the following expression for $\mathbf{H}_{i,j}$:
+\begin{align}
+    \mathbf{H}_{i,j} = \frac{\hbar^2}{2m_e}\int_{t_{first}}^{t_{last}}dr\left(\frac{dB_j^k}{dx}(r)\frac{dB_i^k}{dx}(r)\right) + \int_{t_{first}}^{t_{last}}dr\left(B_j^k(r)\left(\frac{\hbar^2l(l + 1)}{2m_er^2} - \frac{Ze^2}{4\pi\epsilon_0r}\right)B_i^k(r)\right),\label{eq: H}
+\end{align}and this is the expression used to obtain the result shown in section \ref{sec: result}.
+The integrals in eq \eqref{eq: B} -- \eqref{eq: H}, can be evaluated in a variety of ways, Riemann integration, trapezoidal methods and so on, but in this report, Gaussian Quadrature integration was chosen.
+Gaussian quadrature is a good choice for integration with polynomials as it relies on Legendre polynomials to compute the integral with weighting at certain points.
+Gaussian quadrature, in our domain, is defined as follows:
+\begin{align}
+    \int_{t_n}^{t_{n+ 1}}dr\left(q_1(r)f(r)q_2(r)\right) \approx \sum_{m = 1}^k w_m q_1(r_m)f(r_m)q_2(r_m),\label{eq: gauss-quad}
+\end{align}where $w_m$ are the weights for a $k$ or Legendre polynomial and $r_m$ are the corresponding roots, also known as abscissas, of the same polynomial.
+So if we have $n$ knots, including left and right ghost-points, then our matrix equation is of size $n - k$, where $k$ is the spline order: e.g. $k = 4$ is cubic B-splines, which spans all the B-splines.
+Furthermore, there exists boundary conditions on the left, and right, being that $P_{nl}(r)$ vanishes at $r\to 0$ and that all states bound states goes towards zero as $r\to\infty$, which is accomplished by setting the first and last B-spline to $0$.
+This reduces the matrices by an order of $2$, and thus we're left with a set of $n - k - 2$ equations.
+
+\newparagraph
+The matrices $\mathbf{B}$ and $\mathbf{H}$ are banded matrices of bandwidth $k - 1$, this is because the B-spline are uniquely $0$ after their span. 
+Hence, we have one free parameter, $l$, which is the angular momenta.
+
+
+\section{Result \& Discussion}\label{sec: result}
+In this report, the following unit conversion is made, which result in the unit of energy being Hartree.
+A \verb|c++| script was made to solve eq \eqref{eq: gen eq}, using eq \eqref{eq: B} -- \eqref{eq: H} and \eqref{eq: gauss-quad}.
+The program determines the degree of Legendre polynomial depending on the spline order $k$, so for $k = 4$ the number degree of the Legendre polynomial would be $4$ as well.
+This is beneficial when it comes to higher order polynomials, where the accuracy increases slightly.
+The knot sequence was chosen to be equidistant, in the domain $[0, 25]$, a total of $50$ physical knots.
+The reason for a linear knot sequence is that the B-splines were that the results seemed to be indifferent to the knot sequence. 
+
+\newparagraph
+In table \ref{tab: units}, some constants have been defined, which dominates the unit-analysis of the problem. Using these, the unit of energy is Hartree.
+
+\begin{table}[H]
+    \centering
+    \caption{Unit conversion}
+    \begin{tabular}{|c|c|c|}\hline
+        $\hbar$ & $4\pi\epsilon_0$ & $m_e$\\\hline
+        $1$ & $1$ & $1$\\\hline
+    \end{tabular}
+    \label{tab: units}
+\end{table}\noindent
+In eq \eqref{eq: gen eq} we solve for our reduced radial wave-function $P_{nl}(r)$, which differs slightly compared to the radial part of the wave-function.
+Below in figure \ref{fig: different l} -- \ref{fig: l = 2}, the reduced radial part of the wave-function is presented for a variety of states.
+The energies of the corresponding state were computed and is presented in the table below, table \ref{tab: energies}.
+\begin{table}[H]
+    \centering
+    \caption{Energy of different states}
+    \begin{tabular}{|c|c|}\hline
+        State & Energy [Hartree] \\\hline
+        $1s$ & $-0.499995$\\\hline
+        $2s$ & $-0.124999$\\\hline
+        $2p$ & $-0.125$ \\\hline
+        $3s$ & $-0.0545922$\\\hline
+        $3p$ & $-0.0549094$\\\hline
+        $3d$ & $-0.0553215$\\\hline 
+    \end{tabular}
+    \label{tab: energies}
+\end{table}\noindent
+
+\begin{figure}[H]
+    \centering
+    \begin{subfigure}{0.45\textwidth}
+        \includegraphics[scale = 0.8]{code/l0z1.pdf}
+        \caption{Reduced radial part of $1s$ and $2s$}
+        \label{fig: l = 0}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}{0.45\textwidth}
+        \includegraphics[scale = 0.8]{code/l1z1.pdf}
+        \caption{Reduced radial part of $2s$ and $2p$ states}
+        \label{fig: l = 1}
+    \end{subfigure}
+    \caption{Different states of hydrogen}
+    \label{fig: different l}
+\end{figure}\noindent
+This result is comparable to the actual radial part, which is shown below for a set of states in fig \ref{fig: radial wave-function}
+\begin{figure}[H]
+    \centering
+    \includegraphics[scale = 0.8]{code/l2z1.pdf}
+    \caption{Reduced radial part of $3p$ and $3d$}
+    \label{fig: l = 2}
+\end{figure}\noindent
+The wave-function, $\psi$, is by our assumption separable, into two parts, the radial and spherical parts, $R_{nl}(r)$ and $Y_{nl}(\theta, \phi)$.
+This is allowed by symmetry, allows for easier visualization.
+In the figures below, fig \ref{fig: radial wave-function}, the radial part of the wave-function $R_{nl}(r)$ is being shown.
+Due to limitation in time, the spherical harmonics have not been implemented, although I really would like to.
+
+\begin{figure}[H]
+    \centering
+    \begin{subfigure}{0.3\textwidth}
+        \includegraphics[scale = 0.5]{code/l0z1r.pdf}
+        \caption{Radial part of $\psi$, $1s$ \& $2s$}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}{0.3\textwidth}
+        \includegraphics[scale = 0.5]{code/l1z1r.pdf}
+        \caption{Radial part of $\psi$, $2s$ \& $2p$}
+    
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}{0.3\textwidth}
+        \includegraphics[scale = 0.5]{code/l2z1r.pdf}
+        \caption{Radial part of $\psi$, $3p$ \& $3d$}
+
+    \end{subfigure}
+    \caption{Radial wave-function of different states}
+    \label{fig: radial wave-function}
+\end{figure}\noindent
+If the electric repulsion term in the Hamiltonian, eq \eqref{eq: hamiltonian}, is instead that of a uniform electric sphere,
+\begin{align*}
+    V(r) &= -\frac{Ze^2}{4\pi\epsilon_0} \frac{1}{2R_0}\left(3- \left(\frac{r}{R_0}\right)^2\right); \quad r\leq R_0\\
+    &= -\frac{Ze^2}{4\pi\epsilon_0}\frac{1}{r}:\quad r> R_0,
+\end{align*}then Hamiltonian loses its potential decay close to the core.
+The energies of the $1s$ state is computed to be $E_0 = -0.361099$~Hartree, which is less than the previously found result.
+The other states, loses the majority of the energy, which is expected, since they are located close to the core.
+Furthermore, the radial part of the wave-function, gets clamped and is now contained in a smaller domain. This is seen in figure \ref{fig: mod pot}.
+\begin{figure}[H]
+    \centering
+    \includegraphics[scale = 1]{code/l0z1vcv.pdf}
+    \caption{Radial part of $\psi$, when treated as a uniform sphere}
+    \label{fig: mod pot}
+\end{figure}\noindent
+At the point $R_0$ we have an interesting point, therefore it might be a good idea to point extra knots close to the point $R_0$.
+This would allow for a more accurate representation close to $R_0$, since the B-splines would be able to capture the behavior of the wave-function better.
+\newpage
+
+\section{Conclusion}
+In this report, we've successfully solved the hydrogen atom, by introducing a basis of polynomial.
+This allowed us to solve the hydrogen atoms different orbitals, where the results agree with tabulated data.
+The energies for the different states were found in solving the generalized eigen-value equation that arose in our basis choice, eq \eqref{eq: gen eq},
+and we used Gaussian quadrature to compute the integrals in the equations \eqref{eq: B} -- \eqref{eq: H}.
+
+\newparagraph
+In doing this exercise, I found some usefulness of B-splines, and an appreciation in their simplicity but also their usefulness.
+If I had more time, I would try to implement visualization of the spherical harmonics for the different state, to get a complete picture of the wave-function $\psi_{nl}(r,\theta, \phi)$.
+
+%\printbibliography
+\end{document}
+ 
