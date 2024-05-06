@@ -1,4 +1,5 @@
 #include <cinttypes>
+#include <cmath>
 #include <ios>
 #include <iostream>
 #include <stdexcept>
@@ -23,7 +24,53 @@ typedef std::function<double(double)> lambda;
 const double charge = 1.0;
 const double hbar = 1.0;
 const double m = 1.0;
-const double PI = 3.1415;
+const double PI = 3.14159265358979323846;
+const double a0 = 1.0;
+const double eps0 = 1/ (4.0 * PI);
+
+
+double uniformSphere(double r, int z) {
+  if (r > 10) {
+    return 0.0; 
+  } else {
+    return charge * z / (4 * PI / 3 * (10.0*10.0*10.0));
+  }
+}
+
+double shell(double r, int z) {
+  if (r < 5) {
+    return 0.0;
+  } else if (r > 10) {
+    return 0.0;
+  } else {
+    return charge * z / (4*PI/3*(10.0 * 10.0 * 10.0 - 5.0 * 5.0 * 5.0));
+  }
+}
+
+
+double exactShell(double r, int z) {
+  // if (r < 5 || r > 10) {
+  //   return 0.0;
+  // }
+  if (r == 0.0) {
+    r += 1e-12;
+  }
+  double R3 = std::pow(10.0, 3.0);
+  double r3 = std::pow(5.0, 3.0);
+  double volume = 4.0 * PI * (R3 - r3);
+  return charge / ( eps0 * volume ) * (std::pow(10.0, 2.0) / 2.0 - 1.0 / 3.0*(std::pow(5.0, 3.0) / r + std::pow(r, 2.0)/2.0));
+}
+
+double wf(double r, int z) {
+  return 1.0 / (PI * a0) * std::exp(-2.0*r / a0);
+}
+
+double wfe(double r, int z) {
+  if (r == 0.0) {
+    r += 1e-12;
+  }
+  return charge / (4*PI*eps0) * (1.0 / r - std::exp(-2.0*r)*(1.0/r + 1.0)); 
+}
 
 struct cSpline {
 
@@ -83,9 +130,10 @@ struct cSpline {
   /**
     collmat(func, order): Computes the collocation matrix of the ghost physical points
     @param[in] func: The value on the right hand side,
+    @param[in] z: The electron number
     @return {collmat, rhs}
   */
-  std::tuple<Eigen::MatrixXd, Eigen::VectorXd> collMat(std::function<double(double)> func) {
+  std::tuple<Eigen::MatrixXd, Eigen::VectorXd> collMat(std::function<double(double, int)> func, int z) {
     // N - k splines, but we set the spline to be zero, since  we set the first value to be zero 
     int n = this -> knotsNumber - this -> splineOrder - 1;
     int k = this -> splineOrder;
@@ -93,9 +141,6 @@ struct cSpline {
     Eigen::MatrixXd mat = Eigen::MatrixXd::Zero(n,n);
     Eigen::VectorXd rhs = Eigen::VectorXd::Zero(n);
 
-    std::cout << n << std::endl;
-
-    
     std::vector<std::function<double(double)> > spl = this -> ddsplines;
     
     Eigen::VectorXd t = this -> knots;
@@ -109,16 +154,16 @@ struct cSpline {
           if (std::abs(element) >= 1e-10) {// Due to the shift we actually have 4 points,
             mat(i - (k), j - 1) = element; // We simply remove it
           }
-          //mat(i - k, j - 1) = element;
         }
       }
 
       for (int j = 0; j < n; j++) {
         mat(i - (k - 1), j) = spl[j + 1](t(i));
-      }      //rhs(i - (k - 1)) = -func(t(i + 1)) * t(i + 1);
+      }     
     }
+
     for (int j = 1; j < n; j++) {
-      rhs(j) = -func(t(j + k - 1)) * t(j + k - 1) * 4.0 * PI;
+      rhs(j) = -func(t(j + k - 1), z) * t(j + k - 1) * 4.0 * PI / (4.0 * PI * eps0);
     }
     // Right boundary
     mat(n - 1, n - 1) = this -> dsplines[spl.size() - 1](t(t.size() - 1) - shift);
@@ -368,7 +413,7 @@ struct cSpline {
 
   /**
     getB: Computes the matrix B for the linear system of equations
-    @param[in] func: additional function to compute
+    @param[in] func: additional function to compute, used for part of the lhs.
     @returns The matrix B
   */
   Eigen::MatrixXd getB(std::function<double(double)> func = [](double r) -> double {return 1.0;}) {
@@ -416,38 +461,18 @@ struct cSpline {
     @param[in] l: The angular momentum
     @param[in] z: proton number
     @param[in] r: The position
+    @param[in] vEE: The additional term
     @returns the potential term
   */
-  static double V(int l, int z, double r) {
+  static double V(int l, int z, double r, std::function<double(double)> vEE) {
     if (r == 0) {
       r += 1e-12;
     }
-    return + l * (l + 1) / (2 * m * r * r) - z * charge * charge / (hbar * hbar * r);
+    return hbar * hbar * l * (l + 1) / (2 * m * r * r) - z * charge * charge / (hbar * hbar * r) + charge * vEE(r);
   };
 
 
-  /**
-    VcV: Computes the electron repulsion of a uniform sphere and angular mometum part of the hamiltonian
-    @param[in] l: The angular momentum
-    @param[in] z: proton number
-    @param[in] r: The position
-    @returns the potential term
-  */
-  static double VcV(int l, int z, double r) {
-  if (r == 0) {
-    r+= 1e-12;
-  }
-  double sphereRadii = 1.2 * std::pow(z, 1.0/3.0);
   
-  double v = l * (l + 1) / (2 * m * r * r);
-
-  if (r < sphereRadii) {
-    v += -z * charge * charge / (hbar * hbar * r); // * 4 * pi * epsilon_0 
-  } else {
-    v+= - z * charge * charge / (2 * sphereRadii * hbar * hbar) * (3 - std::pow(r / sphereRadii, 2.0));
-  }
-  return v;
-   };
   /**
     getH1: Computes the matrix H for db_i * db_j for the linear system of equations
     @returns The matrix H1
@@ -465,14 +490,13 @@ struct cSpline {
     Eigen::MatrixXd mat = Eigen::MatrixXd::Zero(n, n);
 
     std::vector<std::function<double(double)>> dsplines = this -> dsplines; // All splines as function of x 
-    // thus dsplines[index](x) = B_i^k(x)
+    // thus dsplines[index](x) = dB_i^k(x)
 
     double ti;
     double ti1;
     for (int i = 1; i < n + 1; i++) {
       for (int j = 1; j < n + 1; j++) {
-        // The function to integrate, which is B_i^k(x) * f(x) * B_j^k(x), where f(x) is either a constant
-        // or the potential term on the lhs of the equation
+        // The function to integrate, which is dB_i^k(x) * dB_j^k(x)
         // We get spline [i + 1] due to the fact that we disregard the first spline, and the last spline
         int min = std::max(i, j);
         int max = std::min(i, j) + k - 1;
@@ -489,29 +513,27 @@ struct cSpline {
         mat(i - 1, j - 1) = element;
       }
     }
-    return mat * 1/2;
+    return mat;
   };
 
   /**
     getH: Computes the matrix H for the linear system of equations
     @param[in] l: The angular momentum
     @param[in] z: The charge
+    @param[in] vEE: The additional term
     @returns The matrix H
   */
-  Eigen::MatrixXd getH(int l, int z, bool cV) {
-    Eigen::MatrixXd H = this -> getH1();
+  Eigen::MatrixXd getH(int l, int z, std::function<double(double)> vEE) {
+    Eigen::MatrixXd H = ( this -> getH1() ) * hbar * hbar / (2 * m);
     
-    if (cV == false) {
-      H += this -> getB([l, z](double x) -> double {return cSpline::V(l, z, x);});
-    } else {
-      H += this -> getB([l, z](double x) -> double {return cSpline::VcV(l, z, x);});
-    }
+    H += this -> getB([l, z, vEE](double x) -> double {return cSpline::V(l, z, x, vEE);});
 
     return H;
+
   };
 
   /**
-    save: Saves the function P_{nl}(r) and R_{nl}(r)
+    saveWave: Saves the function P_{nl}(r) and R_{nl}(r)
     @param[in] filename: The filename to save to
     @param[in] ges: The general eigen value solver, with the computed eigen-pair
   */
@@ -568,49 +590,68 @@ struct cSpline {
   /**
     solveColl: Solves the collocation problem
     @param[in] f - The charge density function
+    @param[in] z - The number of electrons
+    @returns func - The solution V(r) to the collocation problem
   */
-  void solveColl(std::function<double(double)> f){
+  std::function<double(double)> solveColl(std::function<double(double, int)> f, int z){
     Eigen::MatrixXd mat;
     Eigen::VectorXd res;
     Eigen::VectorXd coeff;
-    std::tie(mat, res) = this -> collMat(f);
-    //Eigen::PartialPivLU<Eigen::Ref<Eigen::MatrixXd> > Lu(mat);
-    //coeff = Lu.solve(res);
+    std::tie(mat, res) = this -> collMat(f, z);
     coeff = mat.partialPivLu().solve(res);
     this -> coeff = coeff;
+    std::vector<std::function<double(double)>> splines = this -> splines;
 
-    double r = 0.0;
-    double dr = 0.1;
-    std::cout << "Spline len: " << this -> splines.size() << std::endl;
-    std::ofstream file("test.dat");
-    while (r < 15) {
-      file << r << "\t" << getV(r) << std::endl;
+    // Test to plot the collocation problem, to view that it works.
+    // double r = 0.0;
+    // double dr = 0.1;
+    // std::cout << "Spline len: " << this -> splines.size() << std::endl;
+    // std::ofstream file("test.dat");
+    // while (r < 15) {
+    //   file << r << "\t" << getV(r) << std::endl;
 
-      r += dr;
-    }
-    file.close();
+    //   r += dr;
+    // }
+    // file.close();
+
+    // Returns V = P_{nl}(r) / r
+    return [coeff, splines](double r) -> double {
+      double y = 0;
+      if (r == 0) {
+        r +=1e-12;
+      }
+      for (int i = 0; i < coeff.size(); i++) {
+        y+= coeff[i] * splines[i + 1](r) / r;
+      }
+      return y;
+    };
+    
   };
 
-  double getV(double r) {
-    double y = 0;
-    if (r == 0) {
-      r += 1e-12;
-    }
-    for (int i = 0; i < this -> coeff.size(); i++) {
-      y += this -> coeff[i] * this -> splines[i + 1](r) / r;
-      //y += this -> splines[i](r);// / r;
-    }
-    return y;
-  }
+  // Remove, moved into the file, the return of solveColl
+  double getV(Eigen::VectorXd coeff, std::vector<std::function<double(double)>> splines, double r) {
+        double y = 0;
+        if (r == 0) {
+          r += 1e-12;
+        }
+        for (int i = 0; i < coeff.size(); i++) {
+          //  V = phi(r) / r = sum_i b_i^k(r) / r
+          y +=  coeff[i] *  splines[i + 1](r) / r;
+        }
+
+        return y;
+    };  
 
   /**
     solve: Solves the linear system of equation
     @param[in] l: angular momentum 
     @param[in] z: Particle 
+    @param[in] vEE: The additiuonal function, vEE(x) = 0 by default
+    @returns func: Returns the function R(r, j) where r is the position, and j denotes the level n
   */
-  void solveAtom(int l = 0, int z = 1.0, bool cV = false) {
+  std::function<double(double, int)> solveAtom(int l = 0, int z = 1.0, lambda vEE = [](double x) -> double {return 0;}) {
     Eigen::MatrixXd B = this -> getB();
-    Eigen::MatrixXd H = this -> getH(l, z, cV);
+    Eigen::MatrixXd H = this -> getH(l, z, vEE);
     Solver ges;
     
     // std::cout << "B: \n";
@@ -619,42 +660,107 @@ struct cSpline {
     // std::cout << H << std::endl; 
 
     ges.compute(H, B);
-    
-    std::string filename = "l" + std::to_string(l) + "z" + std::to_string(z);
-    if (cV) {
-      filename += "VcV";
-    }
-    this -> saveWave(filename, ges);
-    
+    // this -> saveWave("test3", ges);
+
+    std::vector<std::function<double(double)>> splines = this -> splines;
+    Eigen::MatrixXd mat = ges.eigenvectors();
+    // We want to solve the thing in the end
+    // Returns R(r)
+    return [mat, splines](double r, int j) -> double {
+      double y = 0;
+      if (r == 0) {
+        r += 1e-12;
+      }
+      for (int i = 1; i < splines.size() - 1; i++) {
+        y += mat(i - 1, j) * splines[i](r) / r; // phi(r) / ( r ) = c_i * B_i^k(r) / r
+      }
+      return y;
+    };
   };
 
 };
 
-double uniformSphere(double r) {
-  if (r > 10) {
-    return 0.0; 
-  } else {
-    return 3.0 / (10.0*10.0*10.0);
+/**
+  Simple Riemann integration
+*/
+double Riemann(double a, double b, std::function<double(double)> func){
+  double sum = 0;
+  double dx = 0.1;
+  while (a < b) {
+    sum += func(a) * dx;
+
+    a+= dx;
   }
+
+  return sum;
 }
 
-double shell(double r) {
-  if (r < 5) {
-    return 0.0;
-  } else if (r > 10) {
-    return 0.0;
-  } else {
-    return 3 / (10 * 10 * 10.0 - 5 * 5 * 5.0);
+/**
+  Simple Trapezoidal method for integration
+*/
+double trapz(double a, double b, std::function<double(double)> func) {
+  double dx = 0.1;
+  double sum = 2 * func(a);
+  while (a < b) {
+    sum += 2 * func(a);
+    a += dx;
   }
+  sum += func(b);
+  return sum * dx/ 2.0;
+  
+}
+
+
+// Solve the helium
+void Helium(){
+
+  double Z = 2.0;
+
+  std::vector<double> t;
+
+  int xmax = 15;
+  double dx = 0.2;
+  double x = 0.0;
+  int i = 0;
+  while (x <= xmax) {
+    t.push_back(x);
+    //std::cout << knots[i] << std::endl;
+    x += dx;
+    i++;
+  }
+
+  cSpline *solver = new cSpline;
+  solver -> setKnots(t);
+
+  // We first solve the atom without any additional potential, i.e. vEE(r) = 0;
+  std::function<double(double, int)> R; // int -> the state 1s, 2s, 3s and so on
+  R = solver -> solveAtom(0, Z); // l = 0, Z = 2 for helium
+
+  std::function<double(double)> rho;
+  rho = [R](double r) -> double {
+    return charge / (4 * PI) * (std::pow(R(r, 0), 2.0) * 2); // 2 comes form N_j, only the 1s state occupied.
+  };
+
+  //std::cout << rho(0) << std::endl;
+  std::cout << "Trapz: " << 4.0 * PI * trapz(0, 50, [rho](double r) -> double {return rho(r) * r * r;}) << std::endl;
+  std::cout << "Riemann: " << 4.0 * PI * Riemann(0, 50, [rho](double r) -> double {return rho(r) * r * r;}) << std::endl;
+
+  std::function<double(double)> vEE_dir = solver -> solveColl(rho);
+
+  
+  //std::function<double(double)>  R = solver -> solveColl(uniformSphere, Z);
+
+  
 }
 
 
 int main() {
+  /*
   cSpline *test = new cSpline;
   std::vector<double> knots;
   // Creating the phyiscal knots
   int xmax = 15;
-  double dx = 1.0;
+  double dx = 0.5;
   double x = 0.0;
   int i = 0;
   while (x <= xmax) {
@@ -663,24 +769,32 @@ int main() {
     x += dx;
     i++;
   }
+  */
+  Helium();
 
   // test -> initialize(11);
+  /*
   test -> setKnots(knots);
 
-  test -> solveColl(shell);
+  test -> solveColl(wf, 1);
+  std::ofstream file("test2.dat");
+  double r = 0.0;
+  double dr = 0.1;
+  while (r < 15) {
+    file << r << "\t" << wfe(r, 1) << std::endl;
+    r += dr;
+  }
+  file.close();
   // int l, z;
   // z = 1;
   // std::cout << "Input l: ";
   // std::cin >> l;
   // std::cout << std::endl;
-  // test -> saveSplines(0); // They look fine
-  // test -> saveSplines(1); // They look fine
-  // test -> saveSplines(2); // They look fine
-  // test -> collMat([](double x) -> double {return 1.0;}); // collMat now works fine
+  // test -> collMat([](double x, int z) -> double {return 1.0;}); // collMat now works fine
   // std::cout << test -> gaussianQuad(0, 1, [](double x) -> double {return x;}) << std::endl;
  
   //test -> solveAtom(l, z, false);
-  
+  */
 
   return 0;
 }
