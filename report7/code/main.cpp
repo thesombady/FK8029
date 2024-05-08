@@ -1,14 +1,14 @@
-#include <cinttypes>
-#include <cmath>
-#include <ios>
-#include <iostream>
-#include <stdexcept>
-#include <system_error>
-#include <vector>
-#include <string>
-#include <functional>
-#include <tuple>
-#include <fstream>
+#include <cinttypes> // int a; cin >> a works
+#include <cmath> // map
+#include <ios> // os
+#include <iostream> // io
+#include <stdexcept> // error
+#include <system_error> // error
+#include <vector> // on call heap array
+#include <string> // string
+#include <functional> // function type
+#include <tuple> // tuple type
+#include <fstream> // write and read to file
 
 #include "../../report5/code/Eigen/Dense"
 #include "../../report5/code/Eigen/Eigen"
@@ -19,6 +19,7 @@
 
 
 typedef Eigen::GeneralizedSelfAdjointEigenSolver<Eigen::MatrixXd> Solver;
+typedef Eigen::MatrixXd Mat;
 typedef std::function<double(double)> lambda;
 
 const double charge = 1.0;
@@ -29,26 +30,28 @@ const double a0 = 1.0;
 const double eps0 = 1/ (4.0 * PI);
 
 
-double uniformSphere(double r, int z) {
+double uniformSphere(double r) {
   if (r > 10) {
     return 0.0; 
   } else {
+    double z = 1;
     return charge * z / (4 * PI / 3 * (10.0*10.0*10.0));
   }
 }
 
-double shell(double r, int z) {
+double shell(double r) {
   if (r < 5) {
     return 0.0;
   } else if (r > 10) {
     return 0.0;
   } else {
+    double z = 1;
     return charge * z / (4*PI/3*(10.0 * 10.0 * 10.0 - 5.0 * 5.0 * 5.0));
   }
 }
 
 
-double exactShell(double r, int z) {
+double exactShell(double r) {
   // if (r < 5 || r > 10) {
   //   return 0.0;
   // }
@@ -61,11 +64,11 @@ double exactShell(double r, int z) {
   return charge / ( eps0 * volume ) * (std::pow(10.0, 2.0) / 2.0 - 1.0 / 3.0*(std::pow(5.0, 3.0) / r + std::pow(r, 2.0)/2.0));
 }
 
-double wf(double r, int z) {
+double wf(double r) {
   return 1.0 / (PI * a0) * std::exp(-2.0*r / a0);
 }
 
-double wfe(double r, int z) {
+double wfe(double r) {
   if (r == 0.0) {
     r += 1e-12;
   }
@@ -73,7 +76,6 @@ double wfe(double r, int z) {
 }
 
 struct cSpline {
-
 
   int knotsNumber;
 
@@ -133,7 +135,7 @@ struct cSpline {
     @param[in] z: The electron number
     @return {collmat, rhs}
   */
-  std::tuple<Eigen::MatrixXd, Eigen::VectorXd> collMat(std::function<double(double, int)> func, int z) {
+  std::tuple<Eigen::MatrixXd, Eigen::VectorXd> collMat(std::function<double(double)> func) {
     // N - k splines, but we set the spline to be zero, since  we set the first value to be zero 
     int n = this -> knotsNumber - this -> splineOrder - 1;
     int k = this -> splineOrder;
@@ -163,7 +165,7 @@ struct cSpline {
     }
 
     for (int j = 1; j < n; j++) {
-      rhs(j) = -func(t(j + k - 1), z) * t(j + k - 1) * 4.0 * PI / (4.0 * PI * eps0);
+      rhs(j) = -func(t(j + k - 1)) * t(j + k - 1) * 4.0 * PI / (4.0 * PI * eps0);
     }
     // Right boundary
     mat(n - 1, n - 1) = this -> dsplines[spl.size() - 1](t(t.size() - 1) - shift);
@@ -223,6 +225,7 @@ struct cSpline {
 
     file.close();
   };
+
   /**
     createSplineFunctions: Creates the spline functions
     Creates the splines in an array of n-k length
@@ -382,13 +385,11 @@ struct cSpline {
     @param[in] a: The lower limit
     @param[in] b: The upper limit
     @param[in] f: The function to integrate
+    @param[in] n: Order of legendre polynomial
     @returns The integral of the function
-
     Note: Implemented from numerical recipes
   */
-  double gaussianQuad(float a, float b, std::function<double(double)> f) {
-    
-    int n = this -> splineOrder;
+  static double gaussianQuad(float a, float b, std::function<double(double)> f, int n) {
 
     Eigen::MatrixXd gauss = leggauss(n);
 
@@ -417,21 +418,18 @@ struct cSpline {
     @returns The matrix B
   */
   Eigen::MatrixXd getB(std::function<double(double)> func = [](double r) -> double {return 1.0;}) {
-
     int n = this -> knotsNumber - this -> splineOrder - 2; // -2 from bc
 
     // We will Have  n - k splines,
     // we disregard the first and last spline due to bc
-
     int k = this -> splineOrder;
 
     Eigen::MatrixXd mat = Eigen::MatrixXd::Zero(n, n);
-
-    std::vector<std::function<double(double)>> splines = this -> splines; // All splines as function of x
-    // thus splines[index](x) = B_i^k(x)
+    std::vector<std::function<double(double)>> splines = this -> splines; // B_i^k(x) 
 
     double ti;
     double ti1;
+
     for (int i = 1; i < n + 1; i++) {
       for (int j = 1; j < n + 1; j++) {
         // The function to integrate, which is B_i^k(x) * f(x) * B_j^k(x), where f(x) is either a constant
@@ -446,15 +444,13 @@ struct cSpline {
           ti = this -> knots(m);
           ti1 = this -> knots(m + 1);
 
-          element += this -> gaussianQuad(ti, ti1, f);
-
+          element += cSpline::gaussianQuad(ti, ti1, f, this -> splineOrder);
         }
         mat(i - 1, j - 1) = element;
       }
     }
     return mat;
   };
-
 
   /**
     V: Computes the electron repulsion and angular part of the hamiltonian
@@ -468,29 +464,21 @@ struct cSpline {
     if (r == 0) {
       r += 1e-12;
     }
-    return hbar * hbar * l * (l + 1) / (2 * m * r * r) - z * charge * charge / (hbar * hbar * r) + charge * vEE(r);
+    return hbar * hbar * l * (l + 1) / (2 * m * r * r) - z * charge * charge / (4.0 * PI * eps0 * r) + charge * vEE(r);
   };
-
-
   
   /**
     getH1: Computes the matrix H for db_i * db_j for the linear system of equations
     @returns The matrix H1
   */
   Eigen::MatrixXd getH1() {
-
-    
     int n = this -> knotsNumber - this -> splineOrder - 2; // -2 from bc
-
     // We will Have  n - k splines,
     // we disregard the first and last spline due to bc
-
     int k = this -> splineOrder;
 
     Eigen::MatrixXd mat = Eigen::MatrixXd::Zero(n, n);
-
-    std::vector<std::function<double(double)>> dsplines = this -> dsplines; // All splines as function of x 
-    // thus dsplines[index](x) = dB_i^k(x)
+    std::vector<std::function<double(double)>> dsplines = this -> dsplines; // d B_i^k(x) / dx
 
     double ti;
     double ti1;
@@ -507,13 +495,13 @@ struct cSpline {
           ti = this -> knots(m);
           ti1 = this -> knots(m + 1);
 
-          element += this -> gaussianQuad(ti, ti1, f);
+          element += cSpline::gaussianQuad(ti, ti1, f, this -> splineOrder);
 
         }
         mat(i - 1, j - 1) = element;
       }
     }
-    return mat;
+    return mat * hbar * hbar / (2 * m);
   };
 
   /**
@@ -524,12 +512,9 @@ struct cSpline {
     @returns The matrix H
   */
   Eigen::MatrixXd getH(int l, int z, std::function<double(double)> vEE) {
-    Eigen::MatrixXd H = ( this -> getH1() ) * hbar * hbar / (2 * m);
-    
-    H += this -> getB([l, z, vEE](double x) -> double {return cSpline::V(l, z, x, vEE);});
-
-    return H;
-
+    Eigen::MatrixXd H = ( this -> getH1() );
+    //H += this -> getB([l, z, vEE](double x) -> double {return cSpline::V(l, z, x, vEE);});
+    return H + this -> getB([l, z, vEE](double x) -> double {return cSpline::V(l, z, x, vEE);}) ;
   };
 
   /**
@@ -557,7 +542,6 @@ struct cSpline {
     double R1;
     double R2;
 
-
     while (r < this -> knots(this -> knots.size() - 1)) {
       p = 0;
       p1 = 0;
@@ -581,11 +565,9 @@ struct cSpline {
     }
 
     std::cout << ges.eigenvalues() << std::endl;
-    
 
     file.close();
-
-  }
+  };
 
   /**
     solveColl: Solves the collocation problem
@@ -593,13 +575,13 @@ struct cSpline {
     @param[in] z - The number of electrons
     @returns func - The solution V(r) to the collocation problem
   */
-  std::function<double(double)> solveColl(std::function<double(double, int)> f, int z){
+  std::function<double(double)> solveColl(std::function<double(double)> f){
     Eigen::MatrixXd mat;
     Eigen::VectorXd res;
     Eigen::VectorXd coeff;
-    std::tie(mat, res) = this -> collMat(f, z);
+    std::tie(mat, res) = this -> collMat(f);
     coeff = mat.partialPivLu().solve(res);
-    this -> coeff = coeff;
+    //this -> coeff = coeff;
     std::vector<std::function<double(double)>> splines = this -> splines;
 
     // Test to plot the collocation problem, to view that it works.
@@ -616,6 +598,8 @@ struct cSpline {
 
     // Returns V = P_{nl}(r) / r
     return [coeff, splines](double r) -> double {
+      // Optimize by finding the nearest spline and just
+      // evaluate close to it instead of evaluating all of them
       double y = 0;
       if (r == 0) {
         r +=1e-12;
@@ -630,17 +614,17 @@ struct cSpline {
 
   // Remove, moved into the file, the return of solveColl
   double getV(Eigen::VectorXd coeff, std::vector<std::function<double(double)>> splines, double r) {
-        double y = 0;
-        if (r == 0) {
-          r += 1e-12;
-        }
-        for (int i = 0; i < coeff.size(); i++) {
-          //  V = phi(r) / r = sum_i b_i^k(r) / r
-          y +=  coeff[i] *  splines[i + 1](r) / r;
-        }
+    double y = 0;
+    if (r == 0) {
+      r += 1e-12;
+    }
+    for (int i = 0; i < coeff.size(); i++) {
+      //  V = phi(r) / r = sum_i b_i^k(r) / r
+      y +=  coeff[i] *  splines[i + 1](r) / r;
+    }
 
-        return y;
-    };  
+    return y;
+  };  
 
   /**
     solve: Solves the linear system of equation
@@ -677,7 +661,47 @@ struct cSpline {
       return y;
     };
   };
+  
+  /**
+    solveAtomPref: Solves the atom with the additional potential
+    @param[in] ges: The general eigen value solver
+    @param[in] B: The matrix B
+    @param[in] H1: The matrix H1, the constant part
+    @param[in] l: The angular momentum
+    @param[in] z: The number of protons
+    @param[in] vEE: The additional potential
+    @returns func: The function P_nl(r, j) where r is the position, and j denotes the level n
+  */
+  Mat solveAtomPref(Solver ges, Mat B, Mat H1, int l = 0, double z = 1.0, lambda vEE = [](double x) -> double {return 0;}) {
+    // make tuple and return ges.eigenvalues()
+    Mat H = H1 + this -> getB([l, z, vEE](double x) -> double {return cSpline::V(l, z, x, vEE);}); // The term that changes
+    ges.compute(H, B);
+    
+    std::vector<std::function<double(double)>> splines = this -> splines;
+    Mat basis = ges.eigenvectors();
+    // We want to solve the thing in the end
+    // Returns P_nl(r)
 
+    return basis; 
+  };
+
+  std::function<double(double)> getP(int k, Mat basis, Mat B) {
+    std::vector<std::function<double(double)>> splines = this -> splines;
+
+    double norm = basis.col(k).transpose() * B * basis.col(k); // Normalize
+    std::cout << "Inner norm: " << norm << std::endl;
+
+    return [basis, splines, k, norm](double r) -> double {
+      double y = 0;
+      if (r == 0) {
+        r += 1e-12;
+      }
+      for (int j = 1; j < splines.size() - 1; j++) {
+        y += basis(j - 1, k) * splines[j](r);
+      }
+      return y / std::sqrt(norm);
+    };
+  };
 };
 
 /**
@@ -685,7 +709,7 @@ struct cSpline {
 */
 double Riemann(double a, double b, std::function<double(double)> func){
   double sum = 0;
-  double dx = 0.1;
+  double dx = 0.05;
   while (a < b) {
     sum += func(a) * dx;
 
@@ -699,15 +723,65 @@ double Riemann(double a, double b, std::function<double(double)> func){
   Simple Trapezoidal method for integration
 */
 double trapz(double a, double b, std::function<double(double)> func) {
-  double dx = 0.1;
+  double dx = 0.05;
   double sum = 2 * func(a);
   while (a < b) {
     sum += 2 * func(a);
     a += dx;
   }
   sum += func(b);
-  return sum * dx/ 2.0;
+  return sum * dx / 2.0;
   
+}
+
+
+std::function<double(double)> normalize(double a, double b, std::function<double(double)> func) {
+  double norm = cSpline::gaussianQuad(a, b, [func](double x) -> double {return func(x) * func(x);}, 8);
+  std::cout << "Norm: " << std::sqrt(norm) << std::endl;
+  return [func, norm](double x) -> double {return func(x) / std::sqrt(norm);};
+}
+
+void test() {
+  double Z = 1.0;
+
+  std::vector<double> t;
+
+  int xmax = 15;
+  double dx = 0.2;
+  double x = 0.0;
+  int i = 0;
+  while (x <= xmax) {
+    t.push_back(x);
+    //std::cout << knots[i] << std::endl;
+    x += dx;
+    i++;
+  }
+
+  cSpline *solver = new cSpline;
+  solver -> setKnots(t);
+  Mat B = solver -> getB();
+
+  Mat H1 = solver -> getH1();
+  Solver ges;
+
+
+  // We first solve the atom without any additional potential, i.e. vEE(r) = 0;
+  std::function<double(double)> p_nl; // int -> the state 1s, 2s, 3s and so on
+
+  Mat basis;
+
+  basis = solver -> solveAtomPref(ges, B, H1, 0, Z); // l = 0, Z = 2 for helium
+  p_nl = solver -> getP(0, basis, B); // 1s state
+
+  std::ofstream file("refactor.dat");
+  double r = 0;
+  while (r < xmax) {
+    file << r << "\t" << p_nl(r) << std::endl;
+
+    r += 0.1;
+  }
+  file.close();
+
 }
 
 
@@ -731,26 +805,90 @@ void Helium(){
 
   cSpline *solver = new cSpline;
   solver -> setKnots(t);
+  Mat B = solver -> getB();
+
+  Mat H1 = solver -> getH1();
+  Solver ges;
 
   // We first solve the atom without any additional potential, i.e. vEE(r) = 0;
-  std::function<double(double, int)> R; // int -> the state 1s, 2s, 3s and so on
-  R = solver -> solveAtom(0, Z); // l = 0, Z = 2 for helium
+  std::function<double(double)> p_nl; // int -> the state 1s, 2s, 3s and so on
+  Mat basis;
+
+  basis = solver -> solveAtomPref(ges, B, H1, 0, Z); // l = 0, Z = 2 for helium
+  p_nl = solver -> getP(0, basis, B); // 1s state
+
+  //normalize(0, xmax, p_nl);
 
   std::function<double(double)> rho;
-  rho = [R](double r) -> double {
-    return charge / (4 * PI) * (std::pow(R(r, 0), 2.0) * 2); // 2 comes form N_j, only the 1s state occupied.
+
+  rho = [p_nl](double r) -> double {
+    if (r == 0) {
+      r+= 1e-12;
+    }
+    return charge / (4 * PI) * 2 * (std::pow(p_nl(r) / r, 2.0)); // 2 comes form N_j, only the 1s state occupied.
   };
 
-  //std::cout << rho(0) << std::endl;
-  std::cout << "Trapz: " << 4.0 * PI * trapz(0, 50, [rho](double r) -> double {return rho(r) * r * r;}) << std::endl;
-  std::cout << "Riemann: " << 4.0 * PI * Riemann(0, 50, [rho](double r) -> double {return rho(r) * r * r;}) << std::endl;
+  std::cout << "Trapz: " << 4.0 * PI * trapz(0, xmax, [rho](double r) -> double {return rho(r) * r * r;}) << std::endl;
+  std::cout << "Riemann: " << 4.0 * PI * Riemann(0, xmax, [rho](double r) -> double {return rho(r) * r * r;}) << std::endl;
+  std::cout << "Quad: " << 4.0 * PI * cSpline::gaussianQuad(0, xmax, [rho](double r) -> double {return rho(r) * r * r;}, 15) << std::endl;
 
-  std::function<double(double)> vEE_dir = solver -> solveColl(rho);
+  // All yields 2.000x, which is the correct value
 
-  
-  //std::function<double(double)>  R = solver -> solveColl(uniformSphere, Z);
+  lambda vEE_dir, vEE_exc, vEE, vEE_old; // All potential functions that we will use
 
-  
+  double eta = 0.4;
+
+  vEE_old = [](double r) -> double {return 0.0;}; // Placeholder which we will replace with the last iterations value
+
+  ///*
+  for (int i = 0; i < 15; i++) {
+    // Replace with tolerance condition abs(E_nl - E_nl_old) < tol
+    std::cout << "Iteration: " << i << std::endl;
+
+    vEE_dir = solver -> solveColl(rho);
+
+    vEE_exc = [rho](double r) -> double {
+      return -3.0 * charge / (4.0 * PI * eps0) * std::pow(3.0 * rho(r) / (charge * 8.0 * PI), 1.0 / 3.0);
+    };
+
+    vEE = [vEE_dir, vEE_exc, eta, vEE_old](double r) -> double {
+      return (vEE_dir(r) + vEE_exc(r))*(1-eta) + eta * vEE_old(r);
+    };
+    vEE_old = vEE;
+
+    basis = solver -> solveAtomPref(ges, B, H1, 0, Z, vEE);
+    p_nl = solver -> getP(0, basis, B);
+
+    rho = [p_nl](double r) -> double {
+      if (r == 0) {
+        r+= 1e-12;
+      }
+      return charge / (4 * PI) * 2 * (std::pow(p_nl(r) / r, 2.0)); // 2 comes form N_j, only the 1s state occupied.
+    };
+    
+  }
+  //*/
+  /*
+  vEE_dir = solver -> solveColl(rho);
+  vEE_exc = [rho](double r) -> double {
+      return -3.0 * charge / (4.0 * PI * eps0) * std::pow(3.0 * rho(r) / (charge * 8.0 * PI), 1.0 / 3.0);
+  };
+  std::cout << vEE_dir(1.0) << ", " << vEE_exc(1.0) << std::endl;
+  vEE = [vEE_dir, vEE_exc, eta, vEE_old](double r) -> double {
+      return (vEE_dir(r) + vEE_exc(r))*(1-eta) + eta * vEE_old(r);
+  };
+  std::cout << vEE(1.0) << std::endl;
+  basis = solver -> solveAtomPref(ges, B, H1, 0, Z, vEE);
+  p_nl = solver -> getP(0, basis, B);
+  std::cout << p_nl(1.0) << std::endl;
+  rho = [p_nl](double r) -> double {
+      if (r == 0) {
+        r+= 1e-12;
+      }
+      return charge / (4 * PI) * 2 * (std::pow(p_nl(r) / r, 2.0)); // 2 comes form N_j, only the 1s state occupied.
+  };
+  std::cout << rho(1.0) << std::endl;
+  */
 }
 
 
@@ -771,17 +909,18 @@ int main() {
   }
   */
   Helium();
+  //test();
 
   // test -> initialize(11);
   /*
   test -> setKnots(knots);
 
-  test -> solveColl(wf, 1);
+  test -> solveColl(wf);
   std::ofstream file("test2.dat");
   double r = 0.0;
   double dr = 0.1;
   while (r < 15) {
-    file << r << "\t" << wfe(r, 1) << std::endl;
+    file << r << "\t" << wfe(r) << std::endl;
     r += dr;
   }
   file.close();
