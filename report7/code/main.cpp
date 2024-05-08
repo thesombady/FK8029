@@ -687,7 +687,7 @@ struct cSpline {
   Mat solveAtomPref2(Mat Binv, Mat H1, int l = 0, double z = 1.0, lambda vEE = [](double x) -> double {return 0;}) {
     // make tuple and return ges.eigenvalues()
     Mat H = H1 + this -> getB([l, z, vEE](double x) -> double {return cSpline::V(l, z, x, vEE);}); // The term that changes
-    Solver2 ges(Binv * H)
+    Eigen::EigenSolver<MatrixXd> ges(Binv * H);
     
     std::vector<std::function<double(double)>> splines = this -> splines;
     Mat basis = ges.eigenvectors();
