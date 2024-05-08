@@ -19,6 +19,7 @@
 
 
 typedef Eigen::GeneralizedSelfAdjointEigenSolver<Eigen::MatrixXd> Solver;
+typedef Eigen::EigenSolver<Eigen::MatrixXd> Solver2;
 typedef Eigen::MatrixXd Mat;
 typedef std::function<double(double)> lambda;
 
@@ -670,7 +671,7 @@ struct cSpline {
     @param[in] l: The angular momentum
     @param[in] z: The number of protons
     @param[in] vEE: The additional potential
-    @returns func: The function P_nl(r, j) where r is the position, and j denotes the level n
+    @returns The eigen vectors
   */
   Mat solveAtomPref(Solver ges, Mat B, Mat H1, int l = 0, double z = 1.0, lambda vEE = [](double x) -> double {return 0;}) {
     // make tuple and return ges.eigenvalues()
@@ -679,8 +680,17 @@ struct cSpline {
     
     std::vector<std::function<double(double)>> splines = this -> splines;
     Mat basis = ges.eigenvectors();
-    // We want to solve the thing in the end
-    // Returns P_nl(r)
+
+    return basis; 
+  };
+  
+  Mat solveAtomPref2(Mat Binv, Mat H1, int l = 0, double z = 1.0, lambda vEE = [](double x) -> double {return 0;}) {
+    // make tuple and return ges.eigenvalues()
+    Mat H = H1 + this -> getB([l, z, vEE](double x) -> double {return cSpline::V(l, z, x, vEE);}); // The term that changes
+    Solver2 ges(Binv * H)
+    
+    std::vector<std::function<double(double)>> splines = this -> splines;
+    Mat basis = ges.eigenvectors();
 
     return basis; 
   };
@@ -691,11 +701,10 @@ struct cSpline {
     double norm = basis.col(k).transpose() * B * basis.col(k); // Normalize
     std::cout << "Inner norm: " << norm << std::endl;
 
+    // Can we do like this?
+    // return basis.col(k) * splines(r)
     return [basis, splines, k, norm](double r) -> double {
       double y = 0;
-      if (r == 0) {
-        r += 1e-12;
-      }
       for (int j = 1; j < splines.size() - 1; j++) {
         y += basis(j - 1, k) * splines[j](r);
       }
@@ -762,7 +771,6 @@ void test() {
   Mat B = solver -> getB();
 
   Mat H1 = solver -> getH1();
-  Solver ges;
 
 
   // We first solve the atom without any additional potential, i.e. vEE(r) = 0;
@@ -770,7 +778,7 @@ void test() {
 
   Mat basis;
 
-  basis = solver -> solveAtomPref(ges, B, H1, 0, Z); // l = 0, Z = 2 for helium
+  basis = solver -> solveAtomPref2(B, H1, 0, Z); // l = 0, Z = 2 for helium
   p_nl = solver -> getP(0, basis, B); // 1s state
 
   std::ofstream file("refactor.dat");
@@ -908,8 +916,8 @@ int main() {
     i++;
   }
   */
-  Helium();
-  //test();
+  //Helium();
+  test();
 
   // test -> initialize(11);
   /*
