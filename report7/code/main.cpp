@@ -19,8 +19,8 @@
 
 
 typedef Eigen::GeneralizedSelfAdjointEigenSolver<Eigen::MatrixXd> Solver;
-typedef Eigen::EigenSolver<Eigen::MatrixXd> Solver2;
 typedef Eigen::MatrixXd Mat;
+typedef Eigen::VectorXd Vec;
 typedef std::function<double(double)> lambda;
 
 const double charge = 1.0;
@@ -175,7 +175,24 @@ struct cSpline {
 
     //std::cout << mat << std::endl;
     return std::make_tuple(mat, rhs);
-    
+  };
+
+  Vec collFunc(std::function<double(double)> func) {
+    int n = this -> knotsNumber - this -> splineOrder - 1;
+    int k = this -> splineOrder;
+
+    Eigen::VectorXd rhs = Eigen::VectorXd::Zero(n);
+
+    Eigen::VectorXd t = this -> knots;
+    double shift = 1e-12;
+
+    for (int j = 1; j < n; j++) {
+      rhs(j) = -func(t(j + k - 1)) * t(j + k - 1) * 4.0 * PI / (4.0 * PI * eps0);
+    }
+
+    rhs(rhs.size() - 1) = 0;
+
+    return rhs;
   };
 
   /**
@@ -582,20 +599,7 @@ struct cSpline {
     Eigen::VectorXd coeff;
     std::tie(mat, res) = this -> collMat(f);
     coeff = mat.partialPivLu().solve(res);
-    //this -> coeff = coeff;
     std::vector<std::function<double(double)>> splines = this -> splines;
-
-    // Test to plot the collocation problem, to view that it works.
-    // double r = 0.0;
-    // double dr = 0.1;
-    // std::cout << "Spline len: " << this -> splines.size() << std::endl;
-    // std::ofstream file("test.dat");
-    // while (r < 15) {
-    //   file << r << "\t" << getV(r) << std::endl;
-
-    //   r += dr;
-    // }
-    // file.close();
 
     // Returns V = P_{nl}(r) / r
     return [coeff, splines](double r) -> double {
@@ -610,22 +614,7 @@ struct cSpline {
       }
       return y;
     };
-    
   };
-
-  // Remove, moved into the file, the return of solveColl
-  double getV(Eigen::VectorXd coeff, std::vector<std::function<double(double)>> splines, double r) {
-    double y = 0;
-    if (r == 0) {
-      r += 1e-12;
-    }
-    for (int i = 0; i < coeff.size(); i++) {
-      //  V = phi(r) / r = sum_i b_i^k(r) / r
-      y +=  coeff[i] *  splines[i + 1](r) / r;
-    }
-
-    return y;
-  };  
 
   /**
     solve: Solves the linear system of equation
@@ -665,44 +654,37 @@ struct cSpline {
   
   /**
     solveAtomPref: Solves the atom with the additional potential
-    @param[in] ges: The general eigen value solver
+    @param[in] ges: The general eigen solver
     @param[in] B: The matrix B
     @param[in] H1: The matrix H1, the constant part
     @param[in] l: The angular momentum
     @param[in] z: The number of protons
     @param[in] vEE: The additional potential
-    @returns The eigen vectors
+    @returns The eigen-vectors & eigen-values
   */
-  Mat solveAtomPref(Solver ges, Mat B, Mat H1, int l = 0, double z = 1.0, lambda vEE = [](double x) -> double {return 0;}) {
+  std::tuple<Mat, Vec> solveAtomPref(Solver ges, Mat B, Mat H1, int l = 0, double z = 1.0, lambda vEE = [](double x) -> double {return 0;}) {
     // make tuple and return ges.eigenvalues()
     Mat H = H1 + this -> getB([l, z, vEE](double x) -> double {return cSpline::V(l, z, x, vEE);}); // The term that changes
     ges.compute(H, B);
     
     std::vector<std::function<double(double)>> splines = this -> splines;
-    Mat basis = ges.eigenvectors();
-
-    return basis; 
+    return std::make_tuple(ges.eigenvectors(), ges.eigenvalues());
   };
   
-  Mat solveAtomPref2(Mat Binv, Mat H1, int l = 0, double z = 1.0, lambda vEE = [](double x) -> double {return 0;}) {
-    // make tuple and return ges.eigenvalues()
-    Mat H = H1 + this -> getB([l, z, vEE](double x) -> double {return cSpline::V(l, z, x, vEE);}); // The term that changes
-    Eigen::EigenSolver<MatrixXd> ges(Binv * H);
-    
-    std::vector<std::function<double(double)>> splines = this -> splines;
-    Mat basis = ges.eigenvectors();
-
-    return basis; 
-  };
-
+  /**
+    getP: Computes the P_{nl}(r) function, normalized
+    @param[in] k: The k:th order, i.e. the k -s/p/d/f state
+    @param[in] basis: The coefficients matrix (spline coefficients for each state)
+    @param[in] B: The rhs matrix
+    @returns The function P_{nl}(r)/sqrt(norm)
+  */
   std::function<double(double)> getP(int k, Mat basis, Mat B) {
-    std::vector<std::function<double(double)>> splines = this -> splines;
-
+    // Can we do like this?
+    // return basis.col(k) * splines(r)
+    std::vector<std::function<double(double)> > splines = this -> splines;
     double norm = basis.col(k).transpose() * B * basis.col(k); // Normalize
     std::cout << "Inner norm: " << norm << std::endl;
 
-    // Can we do like this?
-    // return basis.col(k) * splines(r)
     return [basis, splines, k, norm](double r) -> double {
       double y = 0;
       for (int j = 1; j < splines.size() - 1; j++) {
@@ -769,17 +751,19 @@ void test() {
   cSpline *solver = new cSpline;
   solver -> setKnots(t);
   Mat B = solver -> getB();
-
   Mat H1 = solver -> getH1();
-
 
   // We first solve the atom without any additional potential, i.e. vEE(r) = 0;
   std::function<double(double)> p_nl; // int -> the state 1s, 2s, 3s and so on
 
+  Solver ges;
   Mat basis;
+  Vec eigenvals;
 
-  basis = solver -> solveAtomPref2(B, H1, 0, Z); // l = 0, Z = 2 for helium
+  std::tie(basis, eigenvals) = solver -> solveAtomPref(ges, B, H1, 0, Z); // l = 0, Z = 2 for helium
   p_nl = solver -> getP(0, basis, B); // 1s state
+
+  normalize(0, xmax, p_nl);
 
   std::ofstream file("refactor.dat");
   double r = 0;
@@ -822,7 +806,9 @@ void Helium(){
   std::function<double(double)> p_nl; // int -> the state 1s, 2s, 3s and so on
   Mat basis;
 
-  basis = solver -> solveAtomPref(ges, B, H1, 0, Z); // l = 0, Z = 2 for helium
+  Vec eigenvals;
+
+  std::tie(basis, eigenvals) = solver -> solveAtomPref(ges, B, H1, 0, Z); // l = 0, Z = 2 for helium
   p_nl = solver -> getP(0, basis, B); // 1s state
 
   //normalize(0, xmax, p_nl);
@@ -851,6 +837,7 @@ void Helium(){
   ///*
   for (int i = 0; i < 15; i++) {
     // Replace with tolerance condition abs(E_nl - E_nl_old) < tol
+    // prepared because i return the eigenvalues too now
     std::cout << "Iteration: " << i << std::endl;
 
     vEE_dir = solver -> solveColl(rho);
@@ -864,8 +851,8 @@ void Helium(){
     };
     vEE_old = vEE;
 
-    basis = solver -> solveAtomPref(ges, B, H1, 0, Z, vEE);
-    p_nl = solver -> getP(0, basis, B);
+    std::tie(basis, eigenvals) = solver -> solveAtomPref(ges, B, H1, 0, Z, vEE);
+    p_nl = solver -> getP(0, basis, B); // Normalized in getP function
 
     rho = [p_nl](double r) -> double {
       if (r == 0) {
