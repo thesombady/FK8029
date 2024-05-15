@@ -26,7 +26,7 @@ const double charge = 1.0;
 const double hbar = 1.0;
 const double m = 1.0;
 const double PI = 3.14159265358979323846;
-const double a0 = 1.0;
+const double a0 = 1; // Å
 const double eps0 = 1/ (4.0 * PI);
 
 inline double zeroFunc(double x) { return 0.0; }
@@ -46,9 +46,7 @@ struct cSpline {
 
   int splineOrder;
 
-  /**
-    Constructor: Creates the splines used
-  */
+  //  Constructor: Creates the splines used
   cSpline(int k = 4) {
     this -> splineOrder = k; // Spline order, we can change to 5, 6 and so on
   };
@@ -323,7 +321,7 @@ struct cSpline {
     int k = this -> splineOrder;
 
     Mat mat = Eigen::MatrixXd::Zero(n, n);
-    std::vector<std::function<double(double)>> splines = this -> splines; // B_i^k(x) 
+    std::vector<lambda> splines = this -> splines; // B_i^k(x) 
 
     double ti;
     double ti1;
@@ -338,7 +336,7 @@ struct cSpline {
         double element = 0.0;
         for (int m = min; m <= max; m++) {
 
-          std::function<double(double)> f = [i, j, splines, func](double x) -> double {return splines[i](x) * func(x) * splines[j](x);}; // To skip the first and last spline
+          lambda f = [i, j, splines, func](double x) -> double {return splines[i](x) * func(x) * splines[j](x);};
           ti = this -> knots(m);
           ti1 = this -> knots(m + 1);
 
@@ -388,7 +386,7 @@ struct cSpline {
         element = 0.0;
         for (int m = min; m <= max; m++) {
 
-          lambda f = [i, j, dsplines](double x) -> double {return dsplines[i](x) * dsplines[j](x);}; // To skip the first and last spline
+          lambda f = [i, j, dsplines](double x) -> double {return dsplines[i](x) * dsplines[j](x);};
           ti = this -> knots(m);
           ti1 = this -> knots(m + 1);
 
@@ -471,11 +469,8 @@ struct cSpline {
     @returns The function P_{nl}(r)/sqrt(norm)
   */
   lambda getP(int k, Mat basis, Mat B) {
-    // Can we do like this?
-    // return basis.col(k) * splines(r)
     std::vector<lambda> splines = this -> splines;
     double norm = basis.col(k).transpose() * B * basis.col(k); // Normalize
-    //std::cout << "Inner norm: " << norm << std::endl;
 
     return [basis, splines, k, norm](double r) -> double {
       double y = 0;
@@ -495,7 +490,6 @@ double Riemann(double a, double b, lambda func){
   double dx = 0.01;
   while (a < b) {
     sum += func(a) * dx;
-
     a+= dx;
   }
   return sum;
@@ -506,7 +500,7 @@ double Riemann(double a, double b, lambda func){
 */
 double trapz(double a, double b, lambda func) {
   double dx = 0.01;
-  double sum = 2 * func(a);
+  double sum =  func(a);
   while (a < b) {
     sum += 2 * func(a);
     a += dx;
@@ -518,7 +512,6 @@ double trapz(double a, double b, lambda func) {
 
 lambda normalize(double a, double b, lambda func) {
   double norm = cSpline::gaussianQuad(a, b, [func](double x) -> double {return func(x) * func(x);}, 20);
-  //double norm = Riemann(a, b, func);
   std::cout << "Norm: " << std::sqrt(norm) << std::endl;
   return [func, norm](double x) -> double {return func(x) / std::sqrt(norm);};
 }
@@ -537,12 +530,10 @@ std::vector<double> denselinspace(double a, double b) {
   while (a < b) {
     vec.push_back(a);
     if (a < b * 0.05) {
-      a += 0.05;
-    } else if (a < b * 0.3) {
+      a += 0.01;
+    }  else if (a < b * 0.1) {
       a += 0.1;
-    } else {
-      a += 0.5;
-    }
+    } else { a += 1.0;}
   }
   if (vec[vec.size() - 1] > b) {
     vec.pop_back();
@@ -565,8 +556,6 @@ struct Atom {
   std::vector<lambda> p_n0;
   std::vector<lambda> p_n1;
   std::vector<lambda> p_n2;
-  //Vec hydrogenLike;
-
   Mat Energies;  
   
   // Constructor for the atom struct.
@@ -612,12 +601,7 @@ struct Atom {
     for (int l = 0; l < this -> maxL + 1; l++) {
       H1 = this -> atomSolver -> getH(l, this -> Z);
       std::tie(basis, eigenvals) = this -> atomSolver -> solveAtomPref(ges, B, H1, vEE);
-      Energies.col(l) = eigenvals;
-      /*
-      if (l == 0 && iteration == 0) {
-        this -> hydrogenLike = eigenvals;
-      }
-      */
+      Energies.col(l) = eigenvals;// * (a0 * a0);
       for (int n = 0; n < eigenvals.size() - 1; n ++) {
         p_nl = this -> atomSolver -> getP(n, basis, B);
         if ( eigenvals(n) > 0 ) {break;} // Not a bound state
@@ -638,7 +622,7 @@ struct Atom {
     this -> p_n1 = p_n1;
     this -> p_n2 = p_n2;
     this -> Energies = Energies;
-  }
+  };
 
   /**
     occupancy: Computes the lowest energy states and fill the respecitly with electrons
@@ -656,8 +640,8 @@ struct Atom {
       }
     }
     
-    // Disregard since we fill with atlest 2
-    Mat occ = Eigen::MatrixXd::Zero(hState / 3, this -> maxL + 1); // HighestState x Lmax + 1
+    // Disregard since we fill with atleast 3
+    Mat occ = Eigen::MatrixXd::Zero(hState / 2, this -> maxL + 1); // HighestState x Lmax + 1
     int nOcc = 0;
     int n, l, e;
 
@@ -671,8 +655,7 @@ struct Atom {
         nOcc++;
       }
     }    
-    std::cout << occ << std::endl;
-    // Now it's exescilly large, can we reduice it show how? 
+    // std::cout << occ << std::endl;
     return occ;
   };
 
@@ -689,13 +672,13 @@ struct Atom {
      }
      for (int n = 0; n < occ.rows(); n++) {
        if (occ(n, 0) != 0) {
-        sum += occ(n, 0) * std::pow(this -> p_n0[n - l](r) / r, 2.0); // -l is the shift due to occupaction
+        sum += occ(n, 0) * std::pow(this -> p_n0[n - 0](r) / r, 2.0); // -l is the shift due to occupaction
        }
        if (occ(n, 1) != 0 ) {
-         sum += occ(n, 1) * std::pow(this -> p_n1[n - l](r) / r, 2.0);
+         sum += occ(n, 1) * std::pow(this -> p_n1[n - 1](r) / r, 2.0);
         }
         if (occ(n, 2) != 0) {
-        sum += occ(n, 2) * std::pow(this -> p_n2[n - l](r) / r, 2.0);
+        sum += occ(n, 2) * std::pow(this -> p_n2[n - 2](r) / r, 2.0);
         }
      } 
      return sum * charge / (4.0 * PI);
@@ -714,7 +697,7 @@ struct Atom {
     vEE_old = zeroFunc;
     double eta = 0.4;
     double e_00 = 20.0; // we use this to check the convergence, a random number so we dont converge on the first run
-    double tolerance = 1e-5;
+    double tolerance = 1e-3;
     lambda rho;
     Mat collmat = this -> collSolver -> collMat();
 
@@ -730,7 +713,8 @@ struct Atom {
 
       vEE = [vEE_dir, vEE_exc, eta, vEE_old](double r) -> double {
         return (vEE_dir(r) + vEE_exc(r))*(1-eta) + eta * vEE_old(r);
-      };
+      }; // This is the reason why it is slow. Maybe do an interpolation of the function
+      // instead of recursivly calling the previous one?
 
       vEE_old = vEE;
 
@@ -741,7 +725,6 @@ struct Atom {
       e_00 = this -> Energies(0,0);
     }
 
-    // We want to save: VEE, all pnls and the total energy
     std::string filename = "Atom" + std::to_string(this -> Z); 
     if (this -> Z != this -> N) {
       filename += "Ion";
@@ -754,11 +737,15 @@ struct Atom {
     double dr = 0.1;
 
     while (r < this -> rmax) {
-
       vFile << r << "\t" << vEE(r) << std::endl;
-      p_squared << r << "\t" << 4.0 * PI * r * r * rho(r) << std::endl;
-      
       r += dr;      
+    }
+
+    r = 0;
+    dr = 0.01;
+    while (r <= 4) {
+      p_squared << r << "\t" << 4.0 * PI * r * r * rho(r) << std::endl;
+      r+=dr;
     }
 
     vFile.close();
@@ -768,23 +755,28 @@ struct Atom {
 
   };
 
+  /**
+    totalEnergy: Computes the total energy according to
+    ; sum E_nl - 0.5int P_nl V * P_nl
+    @param[in] occ: The occupation matrix
+    @param[in] vEE: The electron interaction potential
+    @returns the total energy
+  */
   double totalEnergy(Mat occ, lambda vEE) {
 
     double sum = 0;
     lambda f;
-    // std::cout << this -> Energies << std::endl;
-    // std::cout << occ << std::endl;
     for (int i = 0; i < occ.rows(); i++) {
       for (int l = 0; l < occ.cols(); l++) {
         if (occ(i, l) == 0) {continue;}
         if (l == 0) {
-           f = [this, i, vEE](double r) -> double {return std::pow(this -> p_n0[i](r), 2.0) * vEE(r);};
+           f = [this, i, vEE](double r) -> double {return std::pow(this -> p_n0[i - 0](r), 2.0) * vEE(r);};
         }else if (l == 1) {
-           f = [this, i, vEE](double r) -> double {return std::pow(this -> p_n1[i](r), 2.0) * vEE(r);};
+           f = [this, i, vEE](double r) -> double {return std::pow(this -> p_n1[i - 1](r), 2.0) * vEE(r);};
         }else if (l == 2) {
-           f = [this, i, vEE](double r) -> double {return std::pow(this -> p_n2[i](r), 2.0) * vEE(r);};
+           f = [this, i, vEE](double r) -> double {return std::pow(this -> p_n2[i - 2](r), 2.0) * vEE(r);};
         }
-        sum += occ(i,l) * (this -> Energies(i, l) - 0.5 * trapz(0, this -> rmax, f));
+        sum += occ(i, l) * (this -> Energies(i, l) - 0.5 * trapz(0, this -> rmax, f));
       }
     }
     return sum;
@@ -795,8 +787,8 @@ struct Atom {
   */
   void solve() {
 
-    std::vector<double> t1 = denselinspace(0, this -> rmax); // for the collocation solver
-    std::vector<double> t2 = linspace(0, this -> rmax, int(this -> rmax * 2)); // for the atom solver
+    std::vector<double> t1 = linspace(0, this -> rmax, (this -> rmax) * 2); // for the collocation solver
+    std::vector<double> t2 = denselinspace(0, this -> rmax); // for the atom solver
 
     cSpline *collSolver = new cSpline(4); // cubic bspline
     cSpline *atomSolver = new cSpline(4); // cubic bspline
@@ -816,14 +808,6 @@ struct Atom {
 
     this -> checkRho(rho);
     this -> selfConsistancy(ges, occ, B);
-
-    std::cout << "Computing Ion now\n" << std::endl;
-    
-    if (this -> Z != this -> N) { return; }
-
-    this -> makeIon(); // this -> N--;
-    this -> solve(); // Recursive call but making it an ion instead
-    
   };
 
   /**
@@ -844,24 +828,42 @@ void HeliumProblem() {
   Helium -> solve();
 
   delete Helium;
+
+  Atom *Ion = new Atom(2, 1, 30);
+
+  Ion -> solve();
+
+  delete Ion;
 }
 
 void NeonProblem() {
 
-  Atom *Neon = new Atom(10, 10, 75);
+  Atom *Neon = new Atom(10, 10, 40);
 
   Neon -> solve();
 
   delete Neon;
+
+  Atom *Ion = new Atom(10, 9, 40);
+
+  Ion -> solve();
+
+  delete Ion;
 }
 
-void ArgonProblem() {
+void OxygenProblem() {
 
-  Atom *Argon = new Atom(18, 18, 150);
+  Atom *Oxygen = new Atom(8, 8, 40);
 
-  Argon-> solve();
+  Oxygen -> solve();
 
-  delete Argon;
+  delete Oxygen;
+
+  Atom *Ion = new Atom(8, 7, 40);
+
+  Ion -> solve();
+
+  delete Ion;
 }
 
 void GeneralProblem(int z, double rmax) {
@@ -870,26 +872,21 @@ void GeneralProblem(int z, double rmax) {
   General -> solve();
 
   delete General;
-}
 
+  Atom * Ion = new Atom(z, z - 1, rmax);
+
+  Ion -> solve();
+
+  delete Ion;
+}
 
 int main() {
 
-  //HeliumProblem();
+  // HeliumProblem();
 
-  NeonProblem();
+  // NeonProblem();
 
-  //ArgonProblem();
-
-  /*
-  int z;
-  int rmax;
-  std::cout << "Input the number of protons: ";
-  std::cin >> z;
-  std::cout << "Input the maximum radii: ";
-  std::cin >> rmax;
-  GeneralProblem(z, rmax);
-  */
+  OxygenProblem();
 
   return 0;
 }
