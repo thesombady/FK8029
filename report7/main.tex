@@ -1,0 +1,287 @@
+\documentclass[a4paper]{article}
+
+% --- Packages ---
+
+\usepackage{a4wide}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath}
+\usepackage{mathtools}
+\usepackage{amssymb}
+\usepackage[english]{babel}
+\usepackage{mdframed}
+\usepackage{systeme,}
+\usepackage{lipsum}
+\usepackage{relsize}
+\usepackage{caption}
+\usepackage{tikz}
+\usepackage{tikz-3dplot}
+\usetikzlibrary{shapes.geometric}
+\usepackage{pgfplots}
+\usepackage{pgfplotstable}
+\pgfplotsset{compat=newest}%1.7}
+\usepackage{harpoon}%
+\usepackage{graphicx}
+\usepackage{wrapfig}
+\usepackage{subcaption}
+\usepackage{authblk}
+\usepackage{float}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{chngcntr}
+\usepackage{amsthm}
+\usepackage{comment}
+\usepackage{commath}
+\usepackage{hyperref}%Might remove, adds link to each reference
+\usepackage{url}
+\usepackage{calligra}
+\usepackage{pgf}
+
+% --- Bibtex ---
+% To run our bibliography, we need to compile the ref document
+% `biber main` or `biber ref` in the terminal
+% We can compile the document with `pdflatex main` or `latex main`
+
+\usepackage{csquotes}
+\usepackage[
+    %backend=biber,
+    backend = biber,
+    style=phys,
+    sorting=ynt,
+]{biblatex}
+
+%\addbibresource{ref.bib}
+
+
+% --- Commands --- 
+
+\newcommand{\w}{\omega}
+\newcommand{\trace}{\text{Tr}}
+\newcommand{\grad}{\mathbf{\nabla}}
+%\newcommand{\crr}{\mathfrak{r}}
+\newcommand{\laplace}{\nabla^2}
+\newcommand{\newparagraph}{\vspace{.5cm}\noindent}
+
+% --- Math character commands ---
+
+\newcommand{\curl}[1]{\mathbf{\nabla}\times \mathbf{#1}}
+\newcommand{\dive}[1]{\mathbf{\nabla}\cdot \mathbf{#1}}
+\newcommand{\res}[2]{\text{Res}(#1,#2)}
+\newcommand{\fpartial}[2]{\frac{\partial #1}{\partial #2}}
+\newcommand{\rot}[3]{\begin{vmatrix}\hat{x}&\hat{y}&\hat{z}\\\partial_x&\partial_y&\partial_z\\#1&#2&#3 \end{vmatrix}}
+\newcommand{\average}[1]{\langle #1 \rangle}
+\newcommand{\ket}[1]{|#1\rangle}
+\newcommand{\bra}[1]{\langle #1|}
+
+
+%  --- Special character commands ---
+
+\DeclareMathAlphabet{\mathcalligra}{T1}{calligra}{m}{n}
+\DeclareFontShape{T1}{calligra}{m}{n}{<->s*[2.2]callig15}{}
+\newcommand{\crr}{\mathcalligra{r}\,}
+\newcommand{\boldscriptr}{\pmb{\mathcalligra{r}}\,}
+
+
+\title{INPUT TITLE HERE}
+\author{Author : Andreas Evensen}
+\date{Date: \today}
+
+% --- Code ---
+
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+
+\lstdefinestyle{mystyle}{
+    backgroundcolor=\color{backcolour},   
+    commentstyle=\color{codegreen},
+    keywordstyle=\color{magenta},
+    numberstyle=\tiny\color{codegray},
+    stringstyle=\color{codepurple},
+    basicstyle=\ttfamily\footnotesize,
+    breakatwhitespace=false,         
+    breaklines=true,                 
+    captionpos=b,                    
+    keepspaces=true,                 
+    numbers=left,                    
+    numbersep=5pt,                  
+    showspaces=false,                
+    showstringspaces=false,
+    showtabs=false,                  
+    tabsize=2
+}
+
+\lstset{style=mystyle}
+
+\begin{document}
+
+\begin{titlepage}
+    \begin{center}
+        \vspace*{1cm}
+
+        \Huge
+        \textbf{Periodic Table}
+
+        \vspace{0.5cm}
+        \LARGE
+        FK8029 - Computational physics
+
+        \vspace{1.5cm}
+
+        \textbf{Andreas Evensen}
+
+        \vfill
+
+        %\includegraphics[width=0.4\textwidth]{UiO_Segl_pantone.eps}
+
+        \Large
+        Department of Physics\\
+        Stockholm University\\
+        Sweden\\
+        \today
+    \end{center}
+\end{titlepage}
+
+\section{Introduction}
+In this report, certain atoms of the periodic table are investigated. Properties such as probability distribution of the electrons, electron-configuration and electron interaction potentials are computed. This allows for computing the ionization energy of any atom.
+\tableofcontents
+\newpage
+\section{Theory \& Method}
+In atomic physics, energy states are researched upon due to their distinct properties.
+Many of the properties are well-defined today, such as how many atoms lie in each subshell, and how they are filled (Hund's rule).
+Some properties, are not fully known theoretically, such as the ionization energy amongst many.
+We seek to solve the following equation:
+\begin{align}
+    \hat{H}\psi_{n,l}(r, \theta, \phi) = E_{n,l}\psi_{n,l}(r, \theta, \phi).\label{eq: general eq}
+\end{align}As in previous reports, under the assumption of symmetry we impose separation of variables and get the reduced radial function and the spherical harmonics; $\psi_{n,l}(r, \theta, \phi) = P_{n,l}(r)\cdot r^{-1} Y_{n,l}(\theta, \phi)$.
+Using this, equation \eqref{eq: general eq} reduces to, when multiplying by another Bspline from the left and integrating.
+\begin{align}
+    \underbrace{\int\left(\left(\sum_j c_j B_j^k(r)\right)\hat{H}(r)\left(\sum_i c_i B_i^k(r)\right)\right)dr}_{\mathbf{H}\mathbf{c}} &= E\underbrace{\int\left(\left(\sum_i c_j B_j^k(r)\right)\left(\sum_i c_i B_i^k(r)\right)\right)dr}_{\mathbf{B}\mathbf{c}}.\label{eq: gen eq}
+\end{align}This is a general eigen value problem, where the two matrices $\mathbf{B}$ and $\mathbf{H}$ are defined as per below, respectively.
+\begin{align}
+    \mathbf{B}_{i, j} &= \int_{t_{first}}^{t_{last}}dr\left(B_{j}^k(r)B_i^k(r)\right),\label{eq: B}\\
+    \mathbf{H}_{i, j} &= \int_{t_{first}}^{t_{last}}dr\left(B_{j}^k(r)\hat{H}(r)B_i^k(r)\right).\nonumber
+\end{align}The Hamiltonian $\hat{H}$ is defined as follows:
+\begin{align}
+    \hat{H}(r) &= \hbar^2\left(-\frac{1}{2m_e}\frac{d^2}{dr^2} + \frac{l(l + 1)}{2m_e}\frac{1}{r^2} - \frac{Ze^2}{4\pi\epsilon\hbar^2}\frac{1}{r} + e V_{ee}(r)\right),\label{eq: hamiltonian}
+\end{align}where $V_{ee}(r)$ is the electron-electron interaction.
+There exists two types of interactions that occur, the direct interaction and the exchange interaction. The exchange interaction is a direct result of the charge density $\rho(r)$ and is defined as:
+\begin{align}
+    V_{ee}^{exch}(r) = \frac{-3e}{4\pi\epsilon_0}\left(\frac{3\rho(r)}{e8\pi}\right)^{1/3},
+\end{align}whilst the direct interactions are unknown. We find the direct interaction $V_{ee}^{dir}(r)$ by solving the self-consistancy equation that arises by solving the Poisson equation for a given charge density.
+We compute the charge density as follows:
+\begin{align}
+    \rho(r) &= \frac{e}{4\pi}\sum_i^{n_{orb}}N_i\left(\frac{P_{n_i,l_i}(r)}{r}\right)^2,\label{eq: rho}
+\end{align}where $n_{orb}$ are the number of occupied orbitals and $N_i$ are the number of electrons in the current orbital.
+This is thus an iterative process, where the steps are as follows:
+\newpage
+\begin{enumerate}
+    \item Solve equation \eqref{eq: general eq} with $V_{ee}(r) = 0$
+    \item Solve the charge density, equation \eqref{eq: rho}
+    \item Solve the collocation problem to obtain $V_{ee}^{dir}(r)$, as
+    \begin{align}
+        \laplace V_{ee}^{dir}(r) = -\frac{4\pi\rho(r)}{4\pi\epsilon}\label{eq: Poission eq}
+    \end{align}
+    \item Mix the two potentials;
+    \begin{align}
+        V_{ee}(r) = V_{ee}^{dir}(r) + \frac{-3e}{4\pi\epsilon_0}\left(\frac{3\rho(r)}{e8\pi}\right)^{1/3}\label{eq: vEE}
+    \end{align}
+    \item Do a linear interpolation of the previous iteration and check for convergence
+\end{enumerate}
+This implies that we solve equation \eqref{eq: general eq} multiple times for various $V_{ee}(r)$, which will converge as it's a self-consistancy equation.
+Given a specific atom, or ion, the number of electrons are known. But as a check, one can compute the volume integral over the charge density, equation \eqref{eq: rho}, to validate that program executes in a correct manner. This volume integral, can then be reduced and written in the following manner:
+%As the atom is known, so is the total number of electrons, however the number of electrons can be computed as the volume integral over the charge density, which reduces to the following expression
+\begin{align}
+    N_{occ} &= 4\pi\int_0^\infty dr\left(\rho(r)r^2\right),
+\end{align}where $N_{occ}$ is the total number of electrons. This should then be in agreement with the current atom/ion under investigation. The total energy of the atom is then computed as follows, after having achieved convergence in the self-consistancy equation:
+\begin{align}
+    E_{tot} &= \sum_i^{N_{occ}}\left[E_{n,l}^i -\frac{1}{2}\int dr\left(P_{n,l}^i(r)V_{ee}(r)P_{n,l}^i(r)\right)\right].
+\end{align}Where the sum is over all electrons and the energies, and it's corresponding reduced wave-function. The reduced wave-functions has to be normalized, which can be done in two ways. Either by computing the integral over the domain, which is rather a costly computation, or by utilizing the fact that the reduced wave functions are Bsplines. In doing this, we can compute the norm of the reduced wave-function in the following manner:
+\begin{align}
+    \abs{P_{n,l}(r)} &= \left(\mathbf{c}_n^T\int_0^{r_{max}}dr\left(B_{n, l}(r)\cdot B_{n, l}(r)\right)\mathbf{c}_n\right)^{1/2},\label{eq: normalization}
+\end{align}where $\mathbf{c}_n$ is a column vector of the coefficients for the Bsplines. The integral is then a matrix $\mathbf{B}$, where the elements are computed as instructed in equation \eqref{eq: B}.
+
+\newpage
+\section{Result \& Discussion}
+In this section, we discuss and present the result obtained. The results were computed in accordance to the theory above, and the script was made in \verb|cpp| for computational speed. Quantities such as: probability distribution, electron interaction potential, and ionization energies were computed.
+The program used two different knot-sequences, one for the collocation problem, where we solve the Poisson equation, and one for solving the generalized eigen value equation. The first mentioned knot-sequence was a linear sequence, whilst the second knot-sequence was a quasi-linear grid; the knot-sequence is linear in segments and then increases the distance between adjacent knot points between the segments. Therefore, it's evident that we have two separate Bspline, both one used for solving the generalized eigen value problem, equation \eqref{eq: general eq} and one for solving the Poisson equation, equation \eqref{eq: Poission eq}.
+
+\newparagraph
+The general procedure was to compute the Hydrogen like solution. From that determine which electron shell, and subshell to fill where the multiplicity in the shells are determined by $N_{shell} = 2(2l + 1)$, where $l$ is the angular momenta. With this, we know that all $s$ states can hold $2$ electrons, and $p$ states can hold $6$ electrons.
+From there, we solve the self-consistancy equation to find the electron interaction potential, $V_{ee}(r)$ in equation \eqref{eq: general eq}.
+After achieving convergence in the self-consistancy equation, compute the probability distribution, total energy, and the save the results.
+\subsection{Helium}
+The helium atom is composed out of a nucleus of two protons and two neutrons. In its orbitals, two electrons are located in the $1s$ state. We expect the energy to be higher than that of the Hydrogen atom, because of multiple reasons. Higher attraction to the nucleus and electron repulsion affects this.
+Measured values of Helium states that the ground state energy of Helium is approximately $-2$~Hartree. The program made found a ground state energy of $-1.9994$~Hartree. The discrepancy, although small, is due to the knot-sequence.
+The electron interaction potential $V_{ee}(r)$, equation \eqref{eq: vEE}, after solving the self-consistancy equation acts in the following manner, as presented in the figure \ref{fig: vEE He} below.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[scale = 0.8]{code/heliumPotential.pdf}
+    \caption{The electron interaction potential.}
+    \label{fig: vEE He}
+\end{figure}\noindent
+The electrons in the different shells interact, via equation \eqref{eq: vEE}, and one sees that close to the origin of the atom, the interaction dominates, whilst further out the effects fade.
+This is expected, since far from the nucleus the atom is viewed as neutral. The He$^+$ ion also goes towards zero, but faster. This is also expected since the electron potential then goes as $1/r$.
+
+\newparagraph
+The probability distribution of the Helium atom, and its ion is presented below in figure \ref{fig: prob dist He}. The area under the curve is $2$ and $1$ respectively, indicating the number of electrons in the Helium atom and Helium ion.
+The total energy was computed to be $-2.70565$, and $-1.80179$~Hartree for the Helium atom and the He$^+$ ion respectively, and thus the ionization is given by $\Delta E = \abs{\abs{E_{He}} - \abs{E_{He^+}}} =  0.90386$~Hartree.
+\begin{figure}[H]
+    \centering
+    \includegraphics[scale = 0.8]{code/heliumP.pdf}
+    \caption{Probability distribution of He.}
+    \label{fig: prob dist He}
+\end{figure}\noindent
+This is the least computationally heavy program, as the program skips all $l$ states, and only computes the $1s$ state. For Neon, as I'll discuss later, the solution becomes much slower, since the electrons are spread out in three states, $1s$, $2s$ and $2p$
+
+\subsection{Neon}
+Neon is the $10$:th atom in the periodic table, and it has A nucleus of $10$ protons, $10$ neutrons and $10$ electrons.
+From Hund's rule, we know that the electrons are filling the states $1s$, $2s$ and $2p$. The script also computes the electron configuration. 
+The electron interaction potential $V_{ee}(r)$ for Neon is a lot stronger than for Helium, which is shown in the figure below, figure \ref{fig: vEE Ne}. Compared to Helium, the interaction has a strength of approximately $16$~Hartree close to the core, whilst Helium had approximately $1.5$~Hartree close to its core.
+\begin{figure}[H]
+    \centering
+    \includegraphics[scale = 0.8]{code/NeonPotential.pdf}
+    \caption{The electron interaction potential.}
+    \label{fig: vEE Ne}
+\end{figure}\noindent
+The interaction fades as the distance increases, effectively shielding the core. This is the expected behavior, for the same reasons as for Helium as stated prior. In contrast to Helium, the probability distribution of the electrons differs in having two distinct peaks. The reason for this are the $1s$ and the $2s$ orbitals, which are the reason for the two distinct peaks visible in figure \ref{fig: prob dist Ne}.
+The distance at which the peaks are located are not the distance where the states lie. This is evident as the first peak in the figure below is not located at the same distance from the origin as that of Helium, figure \ref{fig: prob dist He}.
+\begin{figure}[H]
+    \centering
+    \includegraphics[scale = 0.8]{code/NeonP.pdf}
+    \caption{Probability distribution of Ne.}
+    \label{fig: prob dist Ne}
+\end{figure}\noindent
+The total energy for Neon is given by $-137.9$~Hartree and for the Neon ion, it's given by $-135.149$~Hartree. Thus, the ionization energy is given by: $\Delta E = \abs{-137.9} - \abs{-135.149} = 2.751$~Hartree. This is slightly higher than expected, where the expected value is approximately $\Delta E = 0.75$~Hartree.
+\subsection{Other atoms}
+In addition to solving the Helium and Neon, Oxygen was also tested.
+The following results are provided for the Oxygen atom and ion.
+
+\begin{figure}[H]
+    %\centering
+    \begin{subfigure}{0.45\textwidth}
+        \centering
+        \includegraphics[scale = 0.7]{code/oxygenPotential.pdf}
+        \caption{Electron interaction potential for Oxygen}
+        \label{fig: vEE C}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}{0.45\textwidth}
+        \centering
+        \includegraphics[scale = 0.7]{code/oxygenP.pdf}
+        \caption{Probability distribution for Oxygen}
+        \label{fig: Prob dist C}
+    \end{subfigure}
+    \caption{\ref{fig: vEE C}: Slater and direct interaction for Oxygen. \ref{fig: Prob dist C}: Probability distribution for Oxygen}
+\end{figure}\noindent
+The electron interaction potential $V_{ee}(r)$ for Oxygen is again higher than for Neon, close to the nucleus. This is expected as the number of electrons increases, raising the energy. The probability distribution again has two distinct peaks, corresponding to the $1s$ and $2s$ states. However, the second peak is significantly lower than in Neon, figure \ref{fig: prob dist Ne}. The ionization energy is given by $\Delta E = \abs{-82.5621} - \abs{-81.5582} = 1.0039$~Hartree. Comparing this ionization energy for Oxygen, compared to that of Neon, two atoms that are close to each other on the periodic table, there is an significant difference in binding energy.
+\section{Conclusion}
+In this report various properties of atoms were computed, such as: Probability distribution, electron configuration and ionization energy. Although certain values differ compared to experimental numbers, trends have been seen. Trends as higher ionization energies for nobel-gases compared to other types of atoms. 
+
+\newparagraph
+Even though the program was written in \verb|cpp|, which is considered a numerically fast language, the program was slow to my standard. The reason for this is recursively calling functions that have to be evaluated for the entire domain. A way to increase the computational speed would therefore be to evaluate the recursive functions for a subset of points in the domain, this would however decrease accuracy. Therefore, a trade-off has to be evaluated, and a decision has to be taken with that taken into account.
+Furthermore, the program only supports $l$ up to $2$, which would be the $d$ subshell. Given more time, I would like to extend the program by introducing the possibility to increase $l$ significantly, to the $f$ subshell. 
+%\printbibliography
+\end{document}
+ 
