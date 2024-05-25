@@ -1,0 +1,398 @@
+\documentclass[a4paper]{article}
+
+% --- Packages ---
+
+\usepackage{a4wide}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath}
+\usepackage{mathtools}
+\usepackage{amssymb}
+\usepackage[english]{babel}
+\usepackage{mdframed}
+\usepackage{systeme,}
+\usepackage{lipsum}
+\usepackage{relsize}
+\usepackage{caption}
+\usepackage{tikz}
+\usepackage{tikz-3dplot}
+\usetikzlibrary{shapes.geometric}
+\usepackage{pgfplots}
+\usepackage{pgfplotstable}
+\pgfplotsset{compat=newest}%1.7}
+\usepackage{harpoon}%
+\usepackage{graphicx}
+\usepackage{wrapfig}
+\usepackage{subcaption}
+\usepackage{authblk}
+\usepackage{float}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{chngcntr}
+\usepackage{amsthm}
+\usepackage{comment}
+\usepackage{commath}
+\usepackage{hyperref}%Might remove, adds link to each reference
+\usepackage{url}
+\usepackage{calligra}
+\usepackage{pgf}
+
+% --- Bibtex ---
+% To run our bibliography, we need to compile the ref document
+% `biber main` or `biber ref` in the terminal
+% We can compile the document with `pdflatex main` or `latex main`
+
+\usepackage{csquotes}
+\usepackage[
+    %backend=biber,
+    backend = biber,
+    style=phys,
+    sorting=ynt,
+]{biblatex}
+
+%\addbibresource{ref.bib}
+
+
+% --- Commands --- 
+
+\newcommand{\w}{\omega}
+\newcommand{\trace}{\text{Tr}}
+\newcommand{\grad}{\mathbf{\nabla}}
+%\newcommand{\crr}{\mathfrak{r}}
+\newcommand{\laplace}{\nabla^2}
+\newcommand{\newparagraph}{\vspace{.5cm}\noindent}
+
+% --- Math character commands ---
+
+\newcommand{\curl}[1]{\mathbf{\nabla}\times \mathbf{#1}}
+\newcommand{\dive}[1]{\mathbf{\nabla}\cdot \mathbf{#1}}
+\newcommand{\res}[2]{\text{Res}(#1,#2)}
+\newcommand{\fpartial}[2]{\frac{\partial #1}{\partial #2}}
+\newcommand{\rot}[3]{\begin{vmatrix}\hat{x}&\hat{y}&\hat{z}\\\partial_x&\partial_y&\partial_z\\#1&#2&#3 \end{vmatrix}}
+\newcommand{\average}[1]{\langle #1 \rangle}
+\newcommand{\ket}[1]{|#1\rangle}
+\newcommand{\bra}[1]{\langle #1|}
+
+
+%  --- Special character commands ---
+
+\DeclareMathAlphabet{\mathcalligra}{T1}{calligra}{m}{n}
+\DeclareFontShape{T1}{calligra}{m}{n}{<->s*[2.2]callig15}{}
+\newcommand{\crr}{\mathcalligra{r}\,}
+\newcommand{\boldscriptr}{\pmb{\mathcalligra{r}}\,}
+
+
+\title{INPUT TITLE HERE}
+\author{Author : Andreas Evensen}
+\date{Date: \today}
+
+% --- Code ---
+
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+
+\lstdefinestyle{mystyle}{
+    backgroundcolor=\color{backcolour},   
+    commentstyle=\color{codegreen},
+    keywordstyle=\color{magenta},
+    numberstyle=\tiny\color{codegray},
+    stringstyle=\color{codepurple},
+    basicstyle=\ttfamily\footnotesize,
+    breakatwhitespace=false,         
+    breaklines=true,                 
+    captionpos=b,                    
+    keepspaces=true,                 
+    numbers=left,                    
+    numbersep=5pt,                  
+    showspaces=false,                
+    showstringspaces=false,
+    showtabs=false,                  
+    tabsize=2
+}
+
+\lstset{style=mystyle}
+
+\begin{document}
+
+\begin{titlepage}
+    \begin{center}
+        \vspace*{1cm}
+
+        \Huge
+        \textbf{Lotka Voltera}
+
+        \vspace{0.5cm}
+        \LARGE
+        FK8029 - Computational physics
+
+        \vspace{1.5cm}
+
+        \textbf{Andreas Evensen}
+
+        \vfill
+
+        %\includegraphics[width=0.4\textwidth]{UiO_Segl_pantone.eps}
+
+        \Large
+        Department of Physics\\
+        Stockholm University\\
+        Sweden\\
+        \today
+    \end{center}
+\end{titlepage}
+
+
+\section{Introduction}
+How does species population depend on its enviroment? Species population depend on many components, such as: food avaibility, deceases and prediatory behaviors. Some species hunt each other, whilst other live in harmony. Some might be immune to certain deceases, whilst other might not, and there might be transmission of those deceases between the species upon interaction. Therefore, it's reasonable that the population of two or more species depend on the species interaction. Therefore, we will model how to species interact with eachother, and how the population increases or decreases as a result of that interaction.
+
+\newparagraph
+In order to model the population of two species population, as a result of their interaction, we will use the famous Lotka-Voltera equation, also known as the pray-predator equation, in order to determine how the species population varies in time.
+\newpage
+
+\tableofcontents
+\newpage
+
+\section{Theory \& Method}
+The Lotka-Voltera equation is a pair of nonlinear first order ordinary differential equations on the following form:
+\begin{align}
+    \frac{dx}{dt} &= \alpha x - \beta xy \nonumber\\
+    \frac{dy}{dt} &= \delta xy - \gamma y.\label{eq: Lotka-Voltera equations}
+\end{align}In the two above differential equations, $x$ represent the population of species $A$ and $y$ represent the population of species $B$. Thus, the pair of equations models how the population increases or decreases as the two species, $A$ and $B$, interact.
+The variable $\alpha$, decribes the growth-rate of species $A$ and the variable $\beta$ describes the effect of deaths from interactions as a cause from the interaction between species $A$ and $B$. Similarly, the variable $\delta$ the growth rate in the precense of species $A$, whilst $\gamma$ describes the fetality rate of species $B$. Thus, all variables and constants are real and positive.
+Thus, the two equations model how two species population increases or decreases in the presence of each other.
+Given the nature of the problem, we expect the solutions to be contionous.
+The model is simple as it makes the following assumptions:
+\begin{enumerate}
+    \item Species $A$ has unlimited food.
+    \item The food source of species $B$ is entirely species $A$.
+    \item The rate of which the population for the two species is proportional to their current population.
+    \item The ecological properties remains unchanged.
+    \item Species $B$ always 'hunt' species $A$.
+    \item Each of the two species population are described by only time, i.e. the entire population of $B$ partake in 'hunting' species $A$.
+\end{enumerate}The above assumption thus leaves out a great many aspects, such as reaching adulthood, food-sparsity, seasonal changes and the presence of other species.
+
+\newparagraph
+One could generalize this equation sightly, by introducing time dependent variables in the following manner,
+\begin{align}
+    \frac{dx}{dt} &= \alpha(t) x - \beta(t) xy \nonumber\\
+    \frac{dy}{dt} &= \delta(t) xy - \gamma(t) y,\nonumber
+\end{align}which would imply that the food resources for species $A$ changes with time, and growth rate of species $B$ changes with time and not only by the population of species $A$. Furthermore, it would also imply that the population of species $A$ not only depends on the population of species $B$, but also on the seasons, and likewise for species $B$.
+This would the allow for modeling seasonal changes, where the food sparsity would increase during winter for species $A$, whilst remaning for species $B$.
+
+\newparagraph
+The ODE, eq \eqref{eq: Lotka-Voltera equations}, can be solved with a magnitude of time-intergrators, e.g. explicit-Euler method, Runge-Kutta or Newtons method for nonlinear ODE.
+In this report, we develope a solution base on the explicit Euler and Runge-Kutta (forth order).
+Explicit Euler can be written in the following form, where $dt$ is the step-size:
+\begin{align}
+    x_{n + 1} &= x_n + dt \cdot f(t_n, x_n).\label{eq: explicit euler}
+\end{align}where $x_{n + 1}$ is the population at time $t + dt$ as a function of the population at time $t$ and the its integrator. Explicit euler has a global error of $\mathcal{O}(dt)$, which means that the methods error increases linearly with the time-step.
+Similarly, Runge-Kutta (4:th order) can be expressed in the following manner.
+\begin{align}
+    k_1 &= f(t_n, x_n)\nonumber\\
+    k_2 &= f\left(t_n + \frac{dt}{2}, x_n + dt\cdot\frac{k_1}{2}\right)\nonumber\\
+    k_3 &= f\left(t_n + \frac{dt}{2}, x_n + dt\cdot\frac{k_2}{2}\right)\nonumber\\
+    k_4 &= f\left(t_n + dt, x_n + dt\cdot k_3\right)\nonumber\\
+    x_{n+1} &= x_n + \frac{dt}{6}\left(k_1 + 2k_2 + 2k_3 + k_4\right)\label{eq: runge kutta}
+\end{align}Explicit Euler is a Runge-Kutta method, the very first order. Forth order Runge-Kutta, however is a weighted average between the integrators, and has a global error of $\mathcal{O}(dt^4)$, an major increase compared to that of explicit Euler.
+
+\newparagraph
+Solving the pair of equations, eq \eqref{eq: Lotka-Voltera equations}, we can write the equations on a matrix from:
+\begin{align}
+    \begin{pmatrix}
+        \dot{x}\\
+        \dot{y}
+    \end{pmatrix} &= \underbrace{\begin{pmatrix}
+        \alpha - \beta^* y & - \beta^* x \\
+        \delta^* y & \delta^* x - \gamma       
+    \end{pmatrix}}_{\mathbf{J}^*(x, y)}\cdot\begin{pmatrix}
+        x\\
+        y
+    \end{pmatrix},
+\end{align}where $\mathbf{J}^*(x,y)$ is the modified Jacobian matrix, that takes into account the double counting of the variables $\beta$, and $\delta$. Hence, $\delta^* = 0.5\delta$ and $\beta^* = 0.5\beta$. Letting $\det|\mathbf{J}^*(0,0)|$, one obtains the eigenvalues $\lambda_1 = \alpha$ and $\lambda_2 = -\gamma$. This corresponds to a system of where extinction of either species $A$ or $B$ can only occur in the absence of species $A$.
+Moreover, evaluating the modified Jacobian matrix at a a fixed point $\left(\frac{\gamma}{\delta^*}, \frac{\alpha}{\beta^*}\right)$ yields the following:
+\begin{align*}
+    \det\left|\mathbf{J}^* \left(\frac{\gamma}{\delta^*}, \frac{\alpha}{\beta^*}\right)\right| &= \begin{vmatrix}
+        0 & - \frac{\beta^*\gamma}{\delta^*}\\
+        \frac{\alpha\delta^*}{\beta^*}&0
+    \end{vmatrix}\\
+    &= \begin{vmatrix}
+        0 & - \frac{\beta\gamma}{\delta}\\
+        \frac{\alpha\delta}{\beta}&0
+    \end{vmatrix} = \alpha\gamma.
+\end{align*}The eigenvalues are $\lambda_1 = i\sqrt{\alpha\gamma}$ and $\lambda_2 = -i \sqrt{\alpha\gamma}$. This corresponds to a phase with the angular frequency $\sqrt{\alpha\gamma}$.
+
+\newparagraph
+The constants in eq \eqref{eq: Lotka-Voltera equations} determines the problems stiffness, a term that describe how coupled the system is. If the system becomes to stiff, the numerical schemes discussed above no longer apply as a valid solution method for large enough times. This is due to the local truncation error increases significantly as the ratio of the real part of the maximum and minimum eigenvalue increases. 
+
+\newpage
+\section{Result \& Discussion}
+The above theory was implemented in a \verb|v| script, which performed the nessicary computations. No external libraries/packages/modules were used in order to perform the computations.
+
+\subsection{Numerical solution}
+Both explicit Euler and forth order Runge-Kutta was implemented in order to solve the problem numerically. Since no exact solution exist, and we can only use the relative error comparsion. Therefore, we compute the solution varying the time-step $dt$, and compare the last two points, i.e. $\abs{\tilde{\mathbf{p}}_{n}- \mathbf{p}_n}$, where $\mathbf{p}$ is a vector containing the two species population at the at the last time in the simulation. Doing this, one can view how the relative error increases as the time-step increases.
+\begin{minipage}{0.5\textwidth}
+\begin{figure}[H]
+    \centering
+    \includegraphics[scale = 0.8]{code/method_comp.pdf}
+    \caption{Comparsion of the two methods}
+    \label{fig: method comparison}
+\end{figure}
+\end{minipage}
+\begin{minipage}{0.5\textwidth}
+From the above figure, it's clearly visble that the trunctated relative error is smaller when using the forth order Runge-Kutta method, and we can achieve the same accuracy with the method with larger time-steps as compared to that of the explicit Euler method, i.e. with a stepsize $10^{-2}$ we obtain the same accuracy with the Runge-Kutta method as using the time-step $10^{-4}$. Furthermore, the stability of the Runge-Kutta method is greater, as it's stability region is greater.
+\end{minipage}
+
+\subsection{Species population}
+In equation \eqref{eq: Lotka-Voltera equations} there exists four constants, each of them describing the behavior of the system. Below is a table depicting the choosen parameters, and the corresponding initial condition used for the solution. In total five different set of variables were solved.
+
+\begin{table}[H]
+    \centering
+    \caption{Variables}
+    \begin{tabular}{|c|c|c|c|c|c|c|}\hline
+        \# &$\alpha$ & $\beta$ & $\delta$ & $\gamma$ & $x_0$ & $y_0$ \\\hline
+        $1$ & $1.0$ & $0.1$ & $0.8$ & $1.4$ & $8$ & $5$\\\hline
+        $2$ & $1.0$ & $0.5$ & $1.0$ & $0.9$ & $10$ & $5$\\\hline
+        $3$ & $1.1$ & $0.5$ & $0.3$ & $0.9$ & $10$ & $5$ \\\hline
+        $4$ & $1.5$ & $0.1$ & $0.1$ & $0.1$ & $5$ & $10$\\\hline
+        $5$ & $1.5$ & $0.1$ & $0.1$ & $0.1$ & $0$ & $10$\\\hline
+    \end{tabular}
+    \label{tab: variables}
+\end{table}\noindent
+The parameters were choosen to get a variety of results, in order to achieve a comprehensive comparison. All the comparisons in this section is performed with forth order Runge-Kutta (RK4) with a time-step $dt = 0.001$.
+\newparagraph
+In the figure below, \ref{fig: param 1} the population of the two species and their phase diagram is shown corresponding to the initial condition and the parameters described in the first row of table \ref{tab: variables}  . The population of species $A$ initially drops as the number of species $B$ increases. As the population of species $B$ decreases, the population of species $A$ recovers, and the process repeats itself. Visually, the population of both species goes towards zero at points, however both species recover. 
+\begin{figure}[H]
+    \centering
+    \begin{subfigure}{0.45\textwidth}
+        \includegraphics[scale = 0.8]{code/rk4_pop.pdf}
+        \caption{Species population as a function of time $\#1$}
+        \label{fig: param 1 pop}
+    \end{subfigure}
+    \hfill    
+    \begin{subfigure}{0.45\textwidth}
+        \includegraphics[scale = 0.8]{code/rk4_phase.pdf}
+        \caption{Phase diagram $\#1$}
+        \label{fig: param 1 phase}
+    \end{subfigure}
+    \caption{a) Population evolution of the two species. b) Depiction of the phase space.}
+    \label{fig: param 1}
+\end{figure}\noindent
+The phase diagram, shows that the maximum population of species $B$ is approximately $59$ whilst maximum population of species $A$ is approximatly $9$. The maximum population of species $A$ is reached when the population of species $B$ is approximately $10$, however this is not a stable point.
+
+\noindent
+Using the set of constants and initial condition defined in the second row of tab \ref{tab: variables} the following numerical solutions were obtained, as presented in fig\ref{fig: param 2}. Again the population of the two species goes near to extinction but recovers. Noteworthy is that the phase diagram, fig \ref{fig: param 2 phase} has a point of almost discontiunity at $(0,0)$. This is a result of the parameter $\delta$ which determines the growth of species $B$ as proportionality of the population in species $A$.
+\begin{figure}[H]
+    \centering
+    \begin{subfigure}{0.45\textwidth}
+        \includegraphics[scale = 0.8]{code/2rk4_pop.pdf}
+        \caption{Species population as a function of time $\#2$}
+        \label{fig: param 2 pop}
+    \end{subfigure}
+    \hfill    
+    \begin{subfigure}{0.45\textwidth}
+        \includegraphics[scale = 0.8]{code/2rk4_phase.pdf}
+        \caption{Phase diagram $\#2$}
+        \label{fig: param 2 phase}
+    \end{subfigure}
+    \caption{a) Population evolution of the two species. b) Depiction of the phase space.}
+    \label{fig: param 2}
+\end{figure}\noindent
+The maximum population of species $B$ has decreased, and the population maximum of species $A$ has increased compared to that of \ref{fig: param 1}. The increase in species $A$ is decrase in $\delta$, which means that the population of species $B$ increases more slowely, and the decrease in species $B$ is due to the same factor.
+
+\newparagraph
+Using the constants, and the corresponding initial condition, described in the third row of table \ref{tab: variables} yields a completely different solution. The growth of species $B$ is now perdominent when sufficient population of species $A$ already exist. This is due to the decrease in $\delta$ which corresponds to the population growth of species $B$. The population of either species are not as near to extinction as in the previous instance, as the population flucutate with in opposing to eachother.
+\begin{figure}[H]
+    \centering
+    \begin{subfigure}{0.45\textwidth}
+        \includegraphics[scale = 0.8]{code/3rk4_pop.pdf}
+        \caption{Species population as a function of time $\#3$}
+        \label{fig: param 3 pop}
+    \end{subfigure}
+    \hfill    
+    \begin{subfigure}{0.45\textwidth}
+        \includegraphics[scale = 0.8]{code/3rk4_phase.pdf}
+        \caption{Phase diagram $\#3$}
+        \label{fig: param 3 phase}
+    \end{subfigure}
+    \caption{a) Population evolution of the two species. b) Depiction of the phase space.}
+    \label{fig: param 3}
+\end{figure}\noindent
+It is visible from the phase diagram, fig \ref{fig: param 3 phase}, that the two species dont get as close to extinction as in the previous instances, \ref{fig: param 1} - \ref{fig: param 2}. The maximum population of species $A$ is greater than that of species $B$, which but species $B$ dies of fast without food due to the decreased $\gamma$ parameter. 
+
+\newparagraph
+In the forth set of variables, the initial condition was changed such that there initially existed more entities in species $B$ than that of species $A$. The population of species $B$ never goes near extinction as the death in absence of species $A$ is lowered compared to previous iterations. This is clearly depicted in the phase diagram, fig \ref{fig: param 4 phase} as the minimum population of species $B$ is much greater than 0, whilst for species $A$, this is not the case.
+\begin{figure}[H]
+    \centering
+    \begin{subfigure}{0.45\textwidth}
+        \includegraphics[scale = 0.8]{code/4rk4_pop.pdf}
+        \caption{Species population as a function of time $\#4$}
+        \label{fig: param 4 pop}
+    \end{subfigure}
+    \hfill    
+    \begin{subfigure}{0.45\textwidth}
+        \includegraphics[scale = 0.8]{code/4rk4_phase.pdf}
+        \caption{Phase diagram $\#4$}
+        \label{fig: param 4 phase}
+    \end{subfigure}
+    \caption{a) Population evolution of the two species. b) Depiction of the phase space.}
+    \label{fig: param 4}
+\end{figure}\noindent
+Below, in figure \ref{fig: param 5}, there initially was no population in species $A$, and it's seen that species $B$ will go extinct as time increases.
+\begin{figure}[H]
+    \centering
+    \begin{subfigure}{0.45\textwidth}
+        \includegraphics[scale = 0.8]{code/5rk4_pop.pdf}
+        \caption{Species population as a function of time $\#5$}
+        \label{fig: param 5 pop}
+    \end{subfigure}
+    \hfill    
+    \begin{subfigure}{0.45\textwidth}
+        \includegraphics[scale = 0.8]{code/5rk4_phase.pdf}
+        \caption{Phase diagram $\#5$}
+        \label{fig: param 5 phase}
+    \end{subfigure}
+    \caption{a) Population evolution of the two species. b) Depiction of the phase space.}
+    \label{fig: param 5}
+\end{figure}
+
+\subsection{Further investigation}
+The Lotka-Voltera equation can be generalized to account for $n$ species interaction. Suppose that we wish to include one more species, species $C$.Suppose that species $C$ lives in symbiosis with species $A$, and flurish.\footnote{Species $C$ could be a 'parasite' or an aquatic animal taking shelter under a species $A$.} We can model this by the following set of equations:
+\begin{align}
+    \frac{dx}{dt} &= \alpha x - \beta xz \nonumber\\
+    \frac{dy}{dt} &= \eta x y - \chi y z \nonumber\\
+    \frac{dz}{dt} &= \delta xz - \gamma z.\label{eq: mod-eq}
+\end{align}
+Modeling in this manner, we say that the parameter $\eta$ determines the population growth of species $C$ as relationship of the population in species $A$, whilst $\chi$ describes the deaths of species $C$ as the population of species $B$, and how they species $A$ is hunted. Solving this, again with the implemented Runge-Kutta method yields the following. The following constants were choosen:
+\begin{table}[H]
+    \centering
+    \begin{tabular}{|c|c|c|c|c|c|}\hline
+    $\alpha$ & $\beta$ & $\delta$ & $\gamma$ & $\eta$ & $\chi$\\\hline
+    $1.1$ & $0.5$ & $0.3$ & $0.9$ & $0.1$ & $0.1$\\\hline
+    \end{tabular}
+\end{table}\noindent
+The initial conditions were given as $x(0) = 10$, $y(0) = 1$, and $z(0) = 5$.When introducing the new system, the problem becomes much more stiff, i.e. the ratio between the real part of the largest and smallest eigen value is high. This results in that the solution easily diverge or simplie die out, in contrast to previous iterations. In figure \ref{fig: 3 species interaction pop} It's visible that the species $A$ and $B$ are living together, but the maximum population of species $C$ is increasing with increasing time.
+\begin{figure}[H]
+    \centering
+    \includegraphics[scale = .8]{code/3comp.pdf}
+    \caption{Three species interaction}
+    \label{fig: 3 species interaction pop}
+\end{figure}\noindent
+The phase diagram of this system is depicted below, in figure \ref{fig: 3phase}. In contrast to the previous cases, the phase diagram is not simply a repeating pattern. This is because the population in species $C$ is not regular, like that of species $A$ and $B$.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[scale = 0.8]{code/3phase.pdf}
+    \caption{Phase diagram of three species problem}
+    \label{fig: 3phase}
+\end{figure}
+
+\newpage
+\section{Conclusion}
+In this report, the Lotka-Voltera equation was solved numerically, using both explicit Euler, and forth order Runge-Kutta. As theory suggested, the Runge-Kutta method is far more accurate and thus it was used for the presented results. A set of parameters and inital-conditions were used to show the strength of the pair of equation, and to verify the theory, where the species never go extinct unless the absence of species $A$ initially.
+The model can be generalized to $n$ species, as indiciated by the ficitous extra study of a symbiotic life-form, two species can thrive in each others presence, but similarly it could be a cascade effect. 
+
+\newparagraph
+Furthermore, the method of solving the set of equation is very usefull and can be used on many different problems, e.g. time propagation of photons occupaction in a quantum system or to find the chemical substance resulted from mixing various compunds. Hence, this report has served the purpose of locating yet another problem the method can solve.
+
+\end{document}
