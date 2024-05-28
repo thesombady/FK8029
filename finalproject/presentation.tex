@@ -1,0 +1,305 @@
+\documentclass{beamer}
+\usepackage{subfig}
+
+\usetheme{Madrid}
+\usecolortheme{default}
+
+\title %optional
+{Species population}
+
+\subtitle{Solving the Lotka-Volterra equations}
+
+\author{Andreas Evensen}
+
+\institute[Student] % (optional)
+{
+  Computational Physics\\
+  Stockholm University
+}
+
+\date{\today}
+
+%\logo{\includegraphics[height=1cm]{overleaf-logo}}
+
+\begin{document}
+
+
+\frame{\titlepage}
+
+\begin{frame}{Table of contents}
+	\tableofcontents
+\end{frame}
+
+\section{Introduction}
+\begin{frame}{Introduction}
+	How does the reproduction of any species depend on its environment? What are the factors that makes a species population thrive, or decline.
+	\begin{enumerate}
+		\item<2-> Nutrition
+		\item<3-> Predators
+		\item<4-> Climate
+	\end{enumerate}
+	\begin{itemize}
+		\item<5->Can one use this information to model the population of any two or more species?
+	\end{itemize}
+\end{frame}
+
+\section{Theory}
+\begin{frame}{Theory}
+	Suppose we want to model a system of two species, $X$ and $Y$.
+	\begin{enumerate}
+	    \item<2-> Species $X$ has unlimited food.
+	    \item<3-> The food source of species $Y$ is entirely species $X$.
+	    \item<4-> The rate of which the population for the two species increases/decreases is proportional to their current population.
+	    \item<5-> The ecological properties remains unchanged.
+	    \item<6-> Species $Y$ always 'hunt' species $X$.
+	    \item<7-> Each of the two species population are described by only time, i.e. the entire population of $Y$ partake in 'hunting' species $X$.
+	\end{enumerate}
+\end{frame}
+
+\begin{frame}{Theory}
+	These assumptions gives rise to the following equations:
+	\begin{align}
+	    \frac{dx}{dt} &= \alpha x - \beta xy \nonumber\\
+	    \frac{dy}{dt} &= \delta xy - \gamma y.\label{eq: lv}
+	\end{align}
+	\begin{itemize}
+		\item<2->A pair of nonlinear first order differential equation named \textbf{Lotka-Voltera equations}, or Pray-Predator equations.
+		\item<3->Can be modified by introducing time-dependent variables, $\alpha(t)$, $\beta(t)$, $\delta(t)$, and $\gamma(t)$.
+		\item<4->Can be modifed to the Arditi–Ginzburg equations.
+	\end{itemize}
+\end{frame}
+
+\section{Method}
+
+\begin{frame}{Method}
+	Rewriting our system we obtain:
+	\begin{align}
+	    \begin{pmatrix}
+	        \dot{x}\\
+	        \dot{y}
+	    \end{pmatrix} &= \underbrace{\begin{pmatrix}
+	        \alpha - \beta^* y & - \beta^* x \\
+	        \delta^* y & \delta^* x - \gamma       
+	    \end{pmatrix}}_{\mathbf{J}^*(x, y)}\cdot\begin{pmatrix}
+	        x\\
+	        y
+	    \end{pmatrix},
+	\end{align}
+	where $\beta^* = 0.5\beta$, $\delta^* = 0.5\delta$.
+	\begin{enumerate}
+		\item<2-> Fixed point at $(0,0)$ (Saddle point).
+		\item<3-> Fixed point at $\left(\frac{\gamma}{\delta^*}, \frac{\alpha}{\beta^*}\right)$ (Oscillatory behavior).
+	\end{enumerate}
+
+\end{frame}
+
+
+\begin{frame}{Method}
+	Solutions to eq \ref{eq: lv}, can be obtained via Explicit Euler, or any order Runge-Kutta method.
+	\begin{itemize}
+		\item<2-> 
+		\begin{align}
+			k_1 &= f(t_n, x_n)\nonumber\\
+			k_2 &= f\left(t_n + \frac{dt}{2}, x_n + dt\cdot\frac{k_1}{2}\right)\nonumber\\
+			k_3 &= f\left(t_n + \frac{dt}{2}, x_n + dt\cdot\frac{k_2}{2}\right)\nonumber\\
+			k_4 &= f\left(t_n + dt, x_n + dt\cdot k_3\right)\nonumber\\
+			x_{n+1} &= x_n + \frac{dt}{6}\left(k_1 + 2k_2 + 2k_3 + k_4\right).\label{eq: runge kutta}
+		\end{align}
+	\end{itemize}
+\end{frame}
+
+\section{Result}
+\begin{frame}{Accuracy}
+	Comparison of the two method
+	\center{
+		\includegraphics[scale = 0.7]{code/method_comp.pdf}
+	}
+	\begin{itemize}
+		\item<2-> Choose Runge-Kutta method with $dt = 0.001$.
+	\end{itemize}
+\end{frame}
+
+\begin{frame}{Solutions}
+	Variables: $\alpha = 1.0$, $\beta = 0.1$, $\delta = 0.8$, and $\gamma = 1.4$.\newline
+	Initial condition: $x(0) = 8$, $y(0) = 10$.
+	\begin{figure}
+		\centering
+
+		\subfloat[Population in time\label{fig:a}]{\includegraphics[scale = 0.5]{code/rk4_pop.pdf}}\qquad
+		\subfloat[Phase diagram\label{fig:b}]{\includegraphics[scale = 0.5]{code/rk4_phase.pdf}}
+	
+		\caption{Population and phase diagram}
+		\label{fig:1}
+	\end{figure}
+\end{frame}
+
+\begin{frame}{Solutions}
+	Variables: $\alpha = 1.0$, $\beta = 0.5$, $\delta = 1.0$, and $\gamma = 0.9$.\newline
+	Initial condition: $x(0) = 10$, $y(0) = 5$.
+	\begin{figure}
+		\centering
+
+		\subfloat[Population in time\label{fig:2a}]{\includegraphics[scale = 0.5]{code/2rk4_pop.pdf}}\qquad
+		\subfloat[Phase diagram\label{fig:2b}]{\includegraphics[scale = 0.5]{code/2rk4_phase.pdf}}
+	
+		\caption{Population and phase diagram}
+		\label{fig:2}
+	\end{figure}
+\end{frame}
+
+
+\begin{frame}{Solutions}
+	Variables: $\alpha = 1.1$, $\beta = 0.5$, $\delta = 0.3$, and $\gamma = 0.9$.\newline
+	Initial condition: $x(0) = 10$, $y(0) = 5$.
+	\begin{figure}
+		\centering
+
+		\subfloat[Population in time\label{fig:3a}]{\includegraphics[scale = 0.5]{code/3rk4_pop.pdf}}\qquad
+		\subfloat[Phase diagram\label{fig:3b}]{\includegraphics[scale = 0.5]{code/3rk4_phase.pdf}}
+	
+		\caption{Population and phase diagram}
+		\label{fig:3}
+	\end{figure}
+\end{frame}
+
+\begin{frame}{Extinction}
+	Variables: $\alpha = 1.5$, $\beta = 0.1$, $\delta = 0.1$, and $\gamma = 0.1$.\newline
+	Initial condition: $x(0) = 0$, $y(0) = 10$.
+	\begin{figure}
+		\centering
+
+		\subfloat[Population in time\label{fig:ext pop}]{\includegraphics[scale = 0.5]{code/5rk4_pop.pdf}}\qquad
+		\subfloat[Phase diagram\label{fig: ext phase}]{\includegraphics[scale = 0.5]{code/5rk4_phase.pdf}}
+	
+		\caption{Population and phase diagram}
+		\label{fig: extinction}
+	\end{figure}
+\end{frame}
+
+\section{Further investigation}
+
+\begin{frame}{New set of equations}
+	Suppose we instead want three species, $X$, $Y$, and $Z$.
+	\begin{itemize}
+		\item<2-> Species $Y$ lives in protection of species $X$.
+		\item<3->\begin{align}
+		    \frac{dx}{dt} &= \alpha x - \beta xz \nonumber\\
+		    \frac{dy}{dt} &= \eta x y - \chi y z \nonumber\\
+		    \frac{dz}{dt} &= \delta xz - \gamma z.\label{eq: mod-eq}
+		\end{align}
+	\end{itemize}
+
+\end{frame}
+
+\begin{frame}{Three species}
+	This gives rise to a problem.
+	\begin{itemize}
+		\item<2-> Problem becomes more stiff.
+		\item<3->\begin{table}
+		    \centering
+		    \begin{tabular}{|c|c|c|c|c|c|}\hline
+		    $\alpha$ & $\beta$ & $\delta$ & $\gamma$ & $\eta$ & $\chi$\\\hline
+		    $1.1$ & $0.5$ & $0.3$ & $0.9$ & $0.1$ & $0.1$\\\hline
+		    \end{tabular}
+		\end{table}
+	\end{itemize}
+\end{frame}
+
+\begin{frame}{Three species solution}
+	Initial condition: $x(0) = 10$, $y(0) = 1$, and $z(0) = 5$.
+	\begin{figure}
+		\centering
+
+		\subfloat[Population in time\label{fig:3a pop}]{\includegraphics[scale = 0.5]{code/3comp.pdf}}\qquad
+		\subfloat[Phase diagram\label{fig:3b phase}]{\includegraphics[scale = 0.5]{code/3phase.pdf}}
+	
+		\caption{Population and phase diagram}
+		\label{fig:3 species}
+	\end{figure}
+\end{frame}
+
+\begin{frame}{Generalized Lotka-Volterra equations}
+	Suppose now instead of protection, we say that one herbivore and two carnivores.
+	\begin{align}
+	    \frac{dx}{dt} &= \alpha x - \beta xy \nonumber - \zeta xy\\
+	    \frac{dy}{dt} &= \eta x y - \chi y z \nonumber\\
+	    \frac{dz}{dt} &= \delta xz + \iota yz - \gamma z.\label{eq: mod-eq2}
+	\end{align}
+	\begin{itemize}
+		\item<2-> \begin{table}[H]
+    \centering
+    \begin{tabular}{|c|c|c|c|c|c|c|c|}\hline
+			    $\alpha$ & $\beta$ & $\delta$ & $\gamma$ & $\eta$ & $\chi$ & $\eta$ & $\iota$ \\\hline
+			    $1.1$ & $0.5$ & $0.3$ & $0.9$ & $0.1$ & $0.1$ & $0.1$ & $0.1$\\\hline
+		    \end{tabular}
+		\end{table}
+	\end{itemize}
+	
+\end{frame}
+
+\begin{frame}{Generalized Lotka-Volterra equations}
+	\begin{figure}
+		\centering
+
+		\subfloat[Population in time\label{fig:3a tpop}]{\includegraphics[scale = 0.5]{code/3_tcomp.pdf}}\qquad
+		\subfloat[Phase diagram\label{fig:3b tphase}]{\includegraphics[scale = 0.5]{code/3_tphase.pdf}}
+	
+		\caption{Population and phase diagram for generalized Lotka-Volterra solution}
+	\end{figure}
+
+\end{frame}
+
+\begin{frame}{Time dependent variables}
+	\begin{itemize}
+		\item<1-> Can we modify the equation to take into account seasonal changes?
+		\item<2->\begin{align}
+		    \frac{dx}{dt} &= \alpha(t) x - \beta(t) xy \nonumber\\
+		    \frac{dy}{dt} &= \delta(t) xy - \gamma(t) y.\label{eq: lv time dependent}
+		\end{align}
+	\end{itemize}
+\end{frame}
+
+\begin{frame}{Time dependent variables}
+	How do we then model the seasons?
+	\begin{itemize}
+		\item<2->\begin{align*}
+		    \alpha(t) &= \alpha_1\cos(t)+ \alpha_1\\
+		    \beta(t) &=  \text{H}^{-1}(t)\cdot \beta_1\\
+		    \delta(t) &= \text{H}^{-1}(t)\cdot \delta_1\\
+		    \gamma(t) &= \text{H}(t)\cdot \gamma_1\\
+		\end{align*}
+	\end{itemize}
+\end{frame}
+
+\begin{frame}{Time dependent variables}
+	\begin{figure}
+		\centering
+
+		\subfloat[Population in time\label{fig:t pop}]{\includegraphics[scale = 0.5]{code/t_dep_rk4_pop.pdf}}\qquad
+		\subfloat[Phase diagram\label{fig:t phase}]{\includegraphics[scale = 0.5]{code/t_dep_rk4_phase.pdf}}
+	
+		\caption{Population and phase diagram with time dependent variables}
+		\label{fig: time dependent}
+	\end{figure}
+
+\end{frame}
+
+\section{Conclusion}
+\begin{frame}{Conclusion}
+	What have we learned?
+	\begin{itemize}
+		\item<2-> Solution methods to a pair of nonlinear first order differential equations.
+		\item<3-> Generalization to more than two equations.
+		\item<4-> The unperturbed model is fixed in an oscillatory behavior.
+		\item<5-> The model becomes more stiff when introducing more variables.
+		\item<6-> Naive implementation of seasons brakes symmetry
+		\item<7-> Questions?
+	\end{itemize}
+\end{frame}
+\begin{frame}{Thanks}
+	\center{
+		\huge Thanks for listening
+	}
+\end{frame}
+
+\end{document}
